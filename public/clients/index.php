@@ -34,7 +34,7 @@ function loadPage(string $page): string
         'Category' => 'Category.php',
         'Favory'   => 'Favory.php',
         'Chat'     => 'Chat.php',
-        'Profil'   => 'profil.php'
+        'Profil'   => 'Profil.php'
     ];
 
     return $validPages[$page] ?? 'Home.php';
@@ -57,8 +57,15 @@ $pageStyles = [
     'Category' => 'category.css',
     'Favory'   => 'favory.css',
     'Chat'     => 'chat.css',
-    'Profil'   => 'Profil.css',
+    'Profil'   => 'profil.css',
 ];
+
+/* js par page */
+$pagejs = [
+    'Home'     => 'home.js',
+];
+
+$jspage = $pagejs[$page];
 
 $cssFile = $pageStyles[$page] ?? 'home.css';
 ?>
@@ -98,7 +105,7 @@ $cssFile = $pageStyles[$page] ?? 'home.css';
     <?php require 'includes/navbar.php'; ?>
 
     <!-- JS -->
-    <script src="./js/home.js"></script>
+    <script src="./js/<?= htmlspecialchars($jspage, ENT_QUOTES) ?>"></script>
 
 </body>
 </html>

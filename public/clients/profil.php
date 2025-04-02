@@ -1,4 +1,9 @@
 <?php
+if (!isset($_SESSION['user_id'])) {
+    header('Location: ../');
+    exit;
+}
+
 $admin = $_SESSION['user'];
 $name = $_SESSION['name'];
 $tel = $_SESSION['username'];
