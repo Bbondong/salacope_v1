@@ -1,0 +1,75 @@
+*{
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+section{
+    height: 100vh;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+/* login ou connexion */
+section .connexion , section .connexion form{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+section .connexion form{
+    /* box-shadow: 1px 4px 5px black; */
+    width: 65%;
+    border-radius: 20px;
+}
+/* Logo */
+section .connexion form img{
+    width: 40%;
+}
+section .connexion form h2{
+    font-size: 25px;
+    font-family: 'Times New Roman', Times, serif;
+}
+section .connexion form label{
+    font-size: 20px;
+    margin: 10px;
+    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+}
+section .connexion form input{
+    padding: 15px 45px;
+    border-radius: 10px;
+    font-size: 17px;
+}
+section .connexion form input[type="submit"]{
+    margin-top: 15px;
+    padding: 10px 45px;
+    width: 50%;
+    background: rgba(14, 219, 14, 0.63);
+    cursor: pointer;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+}
+section .connexion p, section .connexion a{
+    margin-top: 10px;
+}
+/* Illustration */
+section .illustration{
+    background-color: red;
+}
+
+@media screen and (max-width:768px) {
+    section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    section .connexion form img{
+        width: 70%;
+    }
+    section .connexion form input[type="submit"]{
+        width: 100%;
+    }
+    section .illustration{
+        display: none;
+    }
+}

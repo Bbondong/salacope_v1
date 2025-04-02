@@ -1,96 +1,31 @@
-<?php
-session_start();
-
-// Si déjà connecté, rediriger vers le dashboard
-if (isset($_SESSION['user_id'])) {
-    header('Location: /dashboard.php');
-    exit();
-}
-?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion - SalaCope</title>
-    <style>
-        .auth-container {
-            max-width: 400px;
-            margin: 2rem auto;
-            padding: 2rem;
-        }
-        .logo {
-            text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        .form-control {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-        }
-        .btn-login {
-            width: 100%;
-            padding: 12px;
-            background: #10B981;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-        .links {
-            text-align: center;
-            margin-top: 1rem;
-        }
-    </style>
+    <link rel="stylesheet" href="../style/css/login.css">
+    <title>Login Salacope</title>
 </head>
 <body>
-    <div class="auth-container">
-        <div class="logo">🛍️</div>
-        <h2>Connexion</h2>
-        
-        <form id="loginForm">
-            <div class="form-group">
-                <input type="email" name="email" placeholder="Emailee" class="form-control" required>
-            </div>
-            <div class="form-group">
-                <input type="password" name="password" placeholder="Mot de passe" class="form-control" required>
-            </div>
-            <button type="submit" class="btn-login">Se connecter</button>
-        </form>
-        
-        <div class="links">
-            <p>Pas encore de compte ? <a href="/auth/register.php">S'inscrire</a></p>
-            <p><a href="/auth/forgot.php">Mot de passe oublié ?</a></p>
+    <section>
+        <!-- Formulaire de connexion -->
+        <div class="connexion">
+            <form action="#" method="post">
+                <img src="../assets/img_log/logo.jpg" alt="logo app">
+                <h2>Connexion</h2>
+                <br>
+                <label for="">Num ou Username</label>
+                <input type="text" required name="user">
+                <label for="">Mot de passe</label>
+                <input type="password" required name="pass">
+                <input type="submit" value="Connexion">
+            </form>
+            <a href="./mot_passe.php">Mot des passe oublie</a>
+            <p>Pas des compte <a href="./inscription.php">Inscrivez-vous</a></p>
+            <p> © COPYRIGhHT SALACOPE || create by <a href="#">Ben tech</a></p>
         </div>
-    </div>
-
-    <script>
-    document.getElementById('loginForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        const response = await fetch('/api/auth/login', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            // Stocker le token
-            localStorage.setItem('salacope_user_token', result.token);
-            
-            // Rediriger vers le dashboard
-            window.location.href = '/dashboard.php';
-        } else {
-            alert(result.message || 'Erreur de connexion');
-        }
-    });
-    </script>
+        <!-- Image illustration -->
+        <div class="illustration"></div>
+    </section>
 </body>
 </html>
