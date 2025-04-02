@@ -1,1 +1,1 @@
-<h1>hello category</h1>
+<h1>hello categori</h1>
