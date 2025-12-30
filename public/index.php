@@ -69,7 +69,7 @@ function getRedirectPath() {
     }
     
     // 3. Par défaut pour navigateur web
-    return '/home.php'; // Page d'accueil normale
+    return '/auth/login.php'; // Page d'accueil normale
 }
 
 /**
