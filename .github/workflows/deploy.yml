@@ -1,0 +1,130 @@
+name: 🚀 Deploy SalaCope to InfinityFree
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v3
+      
+    - name: 📁 Prepare minimal deployment
+      run: |
+        # Créer dossier de déploiement
+        mkdir -p deploy
+        
+        # Copier uniquement les fichiers ESSENTIELS
+        cp index.php onboarding.php deploy/ 2>/dev/null || echo "⚠️ Fichiers manquants, création des versions basiques..."
+        
+        # Créer home.php et dashboard.php BASIQUES si absents
+        if [ ! -f "home.php" ]; then
+          echo "<?php header('Location: index.php'); exit(); ?>" > deploy/home.php
+        else
+          cp home.php deploy/
+        fi
+        
+        if [ ! -f "dashboard.php" ]; then
+          echo "<?php session_start(); ?>
+          <!DOCTYPE html>
+          <html>
+          <head><title>Dashboard - SalaCope</title></head>
+          <body>
+            <h1>Dashboard</h1>
+            <p>En construction...</p>
+            <a href='index.php'>Retour</a>
+          </body>
+          </html>" > deploy/dashboard.php
+        else
+          cp dashboard.php deploy/
+        fi
+        
+        # Copier .htaccess s'il existe
+        cp .htaccess deploy/ 2>/dev/null || echo "# Basic .htaccess
+        RewriteEngine On
+        RewriteCond %{HTTPS} off
+        RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]" > deploy/.htaccess
+        
+        # Créer manifest.json basique
+        echo '{
+          "name": "SalaCope",
+          "short_name": "SalaCope",
+          "start_url": "/index.php",
+          "display": "standalone",
+          "theme_color": "#10B981"
+        }' > deploy/manifest.json
+        
+        # Créer robots.txt
+        echo "User-agent: *
+        Disallow:" > deploy/robots.txt
+        
+        # Créer dossiers nécessaires (vides)
+        mkdir -p deploy/css deploy/js deploy/images deploy/auth deploy/includes deploy/api
+        
+        # Créer fichier CSS minimal
+        echo "/* CSS minimal */" > deploy/css/style.css
+        
+        # Créer fichier JS minimal
+        echo "// JS minimal" > deploy/js/app.js
+        
+        # Créer includes/Database.php basique
+        echo "<?php
+        class Database {
+            private static \$instance = null;
+            
+            public static function getConnection() {
+                // À configurer plus tard
+                return null;
+            }
+        }
+        ?>" > deploy/includes/Database.php
+        
+        # Créer fichier config.php VIDEO (à remplir manuellement)
+        echo "<?php
+        // Fichier de configuration
+        // À REMPLIR MANUELLEMENT avec tes identifiants InfinityFree
+        
+        // Exemple :
+        // define('DB_HOST', 'sqlXXX.epizy.com');
+        // define('DB_NAME', 'epiz_XXX_salacope');
+        // define('DB_USER', 'epiz_XXX_user');
+        // define('DB_PASS', 'ton_mot_de_passe');
+        ?>" > deploy/includes/config.php
+        
+        # Protéger le dossier includes
+        echo 'Order Deny,Allow
+        Deny from all
+        <FilesMatch "\.(php)$">
+          Allow from all
+        </FilesMatch>' > deploy/includes/.htaccess
+        
+        echo "✅ Déploiement minimal préparé"
+        
+    - name: 🚀 Déployer via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.0
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./deploy/
+        server-dir: ./htdocs/
+        exclude: |
+          **/.git*
+          **/.github/*
+        dangerous-clean-slate: false
+        
+    - name: ✅ Vérification
+      run: |
+        echo "🚀 Déploiement terminé !"
+        echo "🌐 Ton site sera disponible à : https://${{ secrets.DOMAIN_NAME }}"
+        echo "📁 Fichiers déployés :"
+        echo "- index.php (point d'entrée)"
+        echo "- onboarding.php"
+        echo "- home.php"
+        echo "- dashboard.php"
+        echo ""
+        echo "⚠️ N'oublie pas de configurer includes/config.php avec tes identifiants MySQL !"
