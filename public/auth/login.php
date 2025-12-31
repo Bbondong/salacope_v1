@@ -55,7 +55,7 @@ if (isset($_SESSION['user_id'])) {
         
         <form id="loginForm">
             <div class="form-group">
-                <input type="email" name="email" placeholder="Email" class="form-control" required>
+                <input type="email" name="email" placeholder="Emailee" class="form-control" required>
             </div>
             <div class="form-group">
                 <input type="password" name="password" placeholder="Mot de passe" class="form-control" required>
