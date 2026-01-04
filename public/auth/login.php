@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../style/css/login.css">
-    <title>Login Salacope</title>
+    <title>Login S'alacop</title>
 </head>
 <body>
     <section>
@@ -27,5 +27,6 @@
         <!-- Image illustration -->
         <div class="illustration"></div>
     </section>
+    <script src="../style/js/login.js"></script>
 </body>
 </html>

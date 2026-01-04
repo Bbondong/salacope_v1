@@ -2,14 +2,18 @@
     padding: 0;
     margin: 0;
     box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
+
 section{
     height: 100vh;
     width: 100%;
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
+
 /* login ou connexion */
 section .connexion , section .connexion form{
     display: flex;
@@ -17,59 +21,278 @@ section .connexion , section .connexion form{
     align-items: center;
     justify-content: center;
 }
-section .connexion form{
-    /* box-shadow: 1px 4px 5px black; */
-    width: 65%;
-    border-radius: 20px;
-}
-/* Logo */
-section .connexion form img{
-    width: 40%;
-}
-section .connexion form h2{
-    font-size: 25px;
-    font-family: 'Times New Roman', Times, serif;
-}
-section .connexion form label{
-    font-size: 20px;
-    margin: 10px;
-    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
-}
-section .connexion form input{
-    padding: 15px 45px;
-    border-radius: 10px;
-    font-size: 17px;
-}
-section .connexion form input[type="submit"]{
-    margin-top: 15px;
-    padding: 10px 45px;
-    width: 50%;
-    background: rgba(14, 219, 14, 0.63);
-    cursor: pointer;
-    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-}
-section .connexion p, section .connexion a{
-    margin-top: 10px;
-}
-/* Illustration */
-section .illustration{
-    background-color: red;
+
+section .connexion {
+    background: white;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
-@media screen and (max-width:768px) {
+section .connexion form{
+    width: 85%;
+    max-width: 400px;
+    padding: 40px 30px;
+    border-radius: 15px;
+    background: white;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+/* Logo */
+section .connexion form img{
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 20px;
+    border: 4px solid #f0f0f0;
+}
+
+section .connexion form h2{
+    font-size: 28px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+section .connexion form .subtitle {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+section .connexion form label{
+    font-size: 14px;
+    font-weight: 500;
+    color: #555;
+    margin: 15px 0 8px 0;
+    align-self: flex-start;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+section .connexion form input{
+    padding: 14px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    width: 100%;
+    border: 2px solid #e0e0e0;
+    background: #f9f9f9;
+    transition: all 0.3s ease;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+section .connexion form input:focus{
+    outline: none;
+    border-color: #4CAF50;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+section .connexion form input::placeholder {
+    color: #aaa;
+    font-size: 14px;
+}
+
+section .connexion form input[type="submit"]{
+    margin-top: 25px;
+    padding: 15px 45px;
+    width: 100%;
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 16px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    letter-spacing: 0.5px;
+}
+
+section .connexion form input[type="submit"]:hover{
+    background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+}
+
+section .connexion form input[type="submit"]:active{
+    transform: translateY(0);
+}
+
+section .connexion a{
+    margin-top: 15px;
+    color: #4CAF50;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.3s ease;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+section .connexion a:hover{
+    color: #3d8b40;
+    text-decoration: underline;
+}
+
+section .connexion p{
+    margin-top: 20px;
+    color: #666;
+    font-size: 14px;
+    text-align: center;
+    line-height: 1.5;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+section .connexion p a{
+    color: #4CAF50;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+section .connexion p a:hover{
+    text-decoration: underline;
+}
+
+section .connexion p.copyright {
+    margin-top: 30px;
+    font-size: 12px;
+    color: #888;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+section .connexion p.copyright a {
+    color: #666;
+    font-weight: 500;
+}
+
+/* Illustration */
+section .illustration{
+    background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+section .illustration::before {
+    content: "🔐";
+    font-size: 120px;
+    opacity: 0.8;
+}
+
+@media screen and (max-width: 1024px) {
+    section .connexion form {
+        width: 90%;
+        padding: 35px 25px;
+    }
+    
+    section .connexion form img {
+        width: 100px;
+        height: 100px;
+    }
+}
+
+@media screen and (max-width: 768px) {
     section {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        padding: 20px;
+        height: auto;
+        min-height: 100vh;
+        grid-template-columns: 1fr;
     }
-    section .connexion form img{
-        width: 70%;
-    }
-    section .connexion form input[type="submit"]{
+    
+    section .connexion {
         width: 100%;
+        max-width: 450px;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     }
+    
+    section .connexion form {
+        width: 100%;
+        padding: 40px 25px;
+        box-shadow: none;
+        border-radius: 0;
+    }
+    
+    section .connexion form img{
+        width: 100px;
+        height: 100px;
+    }
+    
+    section .connexion form h2{
+        font-size: 24px;
+    }
+    
+    section .connexion form label{
+        font-size: 13px;
+        margin: 12px 0 6px 0;
+    }
+    
+    section .connexion form input{
+        padding: 12px 16px;
+        font-size: 15px;
+    }
+    
+    section .connexion form input[type="submit"]{
+        padding: 14px;
+        font-size: 15px;
+        margin-top: 20px;
+    }
+    
+    section .connexion a, 
+    section .connexion p {
+        font-size: 13px;
+        padding: 0 15px;
+    }
+    
+    section .connexion p.copyright {
+        font-size: 11px;
+    }
+    
     section .illustration{
         display: none;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    section {
+        padding: 15px;
+        background: white;
+    }
+    
+    section .connexion {
+        max-width: 100%;
+        box-shadow: none;
+        border-radius: 0;
+    }
+    
+    section .connexion form {
+        padding: 35px 20px;
+    }
+    
+    section .connexion form img{
+        width: 90px;
+        height: 90px;
+    }
+    
+    section .connexion form h2{
+        font-size: 22px;
+    }
+    
+    section .connexion form input{
+        padding: 11px 14px;
+        font-size: 14px;
+    }
+    
+    section .connexion form input[type="submit"]{
+        padding: 13px;
+        font-size: 14px;
     }
 }
