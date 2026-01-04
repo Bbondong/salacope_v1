@@ -32,7 +32,7 @@ function loadEnv($path) {
 }
 
 // Chemin du fichier .env
-$envPath = __DIR__ . '../.env';
+$envPath = __DIR__ . '../.env.exemple';
 
 try {
     loadEnv($envPath);
