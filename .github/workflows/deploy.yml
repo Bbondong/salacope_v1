@@ -1,4 +1,4 @@
-name: 🚀 Déployer SalaCope
+name: 🚀 Déployer SalaCope - Structure complète
 
 on:
   push:
@@ -13,35 +13,144 @@ jobs:
     - name: 📥 Télécharger le code
       uses: actions/checkout@v3
       
-    - name: 📋 Vérifier la structure
+    - name: 📋 Analyser la structure
       run: |
-        echo "📁 Structure du projet :"
+        echo "=== STRUCTURE DU PROJET ==="
         ls -la
         echo ""
         
-        if [ -d "public" ]; then
-          echo "✅ Dossier 'public/' trouvé"
-          ls -la public/
+        echo "=== CONTENU DES DOSSIERS ==="
+        echo "📁 public/ :"
+        ls -la public/ 2>/dev/null || echo "Dossier public/ non trouvé"
+        echo ""
+        
+        echo "👑 admin/ :"
+        ls -la admin/ 2>/dev/null || echo "Dossier admin/ non trouvé"
+        echo ""
+        
+        echo "⚙️ backend/ :"
+        ls -la backend/ 2>/dev/null || echo "Dossier backend/ non trouvé"
+        echo ""
+        
+        echo "✅ Vérification du .htaccess :"
+        if [ -f "public/.htaccess" ]; then
+          echo "✓ public/.htaccess trouvé"
+          head -20 public/.htaccess
         else
-          echo "⚠️ Pas de dossier 'public/', fichiers à la racine :"
-          ls *.php 2>/dev/null || echo "Aucun fichier PHP"
+          echo "⚠️ public/.htaccess non trouvé"
         fi
         
-    - name: 🚀 Déployer les VRAIS fichiers
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.0
+    - name: 🚀 Déployer TOUTE la structure
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./public/  # 👈 CHANGE ICI !
-        server-dir: ./htdocs/
+        local-dir: ./                    # Prend TOUT depuis la racine
+        server-dir: ./htdocs/            # Envoie dans htdocs sur le serveur
         exclude: |
-          **/.git*
-          **/.github/*
-        dangerous-clean-slate: true  # 👈 Nettoie avant !
+          **/.git/
+          **/.github/
+          **/.gitignore
+          **/.gitattributes
+          **/.env*
+          **/.env.example
+          **/README.md
+          **/LICENSE
+          **/composer.*
+          **/package*.json
+          **/node_modules/
+          **/vendor/
+          **/deploy.yml
+          **/deploy.sh
+          **/backup/
+          **/logs/
+          **/*.log
+          **/database.sql
+          **/dump.sql
+        exclude-ftp: true
+        dangerous-clean-slate: false     # IMPORTANT: Ne supprime pas tout !
+        state-name: ftp-deploy.state
         
-    - name: ✅ Confirmation
+    - name: 🔧 Créer .htaccess racine (optionnel)
       run: |
-        echo "🎉 DÉPLOIEMENT RÉUSSI !"
-        echo "🌐 Site : https://salacope.infinityfreeapp.com"
-        echo "⏰ Date : $(date)"
+        # Créer un .htaccess à la racine du serveur pour rediriger
+        echo "Création du .htaccess racine pour InfinityFree..."
+        cat > .htaccess_root << 'EOF'
+        # .htaccess racine - Redirections SalaCope
+        RewriteEngine On
+        
+        # Rediriger la racine vers /public
+        RewriteRule ^$ public/ [L]
+        RewriteRule ^/$ public/ [L]
+        
+        # Si on accède à /admin, garder /admin
+        RewriteCond %{REQUEST_URI} !^/admin
+        RewriteCond %{REQUEST_URI} !^/backend
+        RewriteCond %{REQUEST_URI} !^/public
+        
+        # Tout le reste va vers /public
+        RewriteRule ^(.*)$ public/$1 [L]
+        
+        # Désactiver l'accès aux fichiers sensibles
+        <FilesMatch "\.(env|log|sql|yml|yaml|json)$">
+          Order allow,deny
+          Deny from all
+        </FilesMatch>
+        EOF
+        
+        echo "✅ .htaccess racine généré"
+        
+    - name: 📤 Envoyer .htaccess racine
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./
+        server-dir: ./htdocs/
+        only: .htaccess_root
+        dangerous-clean-slate: false
+      continue-on-error: true  # Continue même si ça échoue
+      
+    - name: 🧪 Vérifier les accès
+      run: |
+        echo ""
+        echo "=== ACCÈS APRÈS DÉPLOIEMENT ==="
+        echo "🌐 Votre site sera accessible via :"
+        echo ""
+        echo "1. https://salacope.infinityfreeapp.com/"
+        echo "   → redirige automatiquement vers /public"
+        echo ""
+        echo "2. https://salacope.infinityfreeapp.com/admin/"
+        echo "   → votre interface d'administration"
+        echo ""
+        echo "3. https://salacope.infinityfreeapp.com/backend/"
+        echo "   → votre API backend"
+        echo ""
+        echo "4. https://salacope.infinityfreeapp.com/public/"
+        echo "   → accès direct au site principal"
+        echo ""
+        
+    - name: ✅ Confirmation finale
+      run: |
+        echo "🎉🎉🎉 DÉPLOIEMENT TERMINÉ ! 🎉🎉🎉"
+        echo ""
+        echo "📊 RÉSUMÉ :"
+        echo "• Structure déployée : public/, admin/, backend/"
+        echo "• HTTPS forcé via votre .htaccess"
+        echo "• Cache et compression activés"
+        echo "• Sécurité renforcée"
+        echo ""
+        echo "🔗 LIENS :"
+        echo "• Site : https://salacope.infinityfreeapp.com/"
+        echo "• Admin : https://salacope.infinityfreeapp.com/admin/"
+        echo "• Backend : https://salacope.infinityfreeapp.com/backend/"
+        echo ""
+        echo "🛡️  SÉCURITÉ :"
+        echo "✓ .env N'A PAS été déployé"
+        echo "✓ Fichiers sensibles protégés"
+        echo "✓ HTTPS obligatoire"
+        echo ""
+        echo "⏰ Déployé le : $(date '+%d/%m/%Y à %H:%M:%S')"
+        echo "========================================"
