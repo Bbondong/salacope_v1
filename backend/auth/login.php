@@ -73,10 +73,10 @@ if (empty($username) || empty($password)) {
 require_once __DIR__ . '/../config.php';
 
 try {
-    // 1. Vérifier dans la table admin - Num OU admin_name
+    // 1. Vérifier dans la table admin - Num seulement (car pas de colonne username)
     $query = "SELECT admin_id, Num, password, admin_name, admin_role 
               FROM admin 
-              WHERE Num = :username OR admin_name = :username 
+              WHERE Num = :username 
               LIMIT 1";
     
     $stmt = $bd->prepare($query);
@@ -113,10 +113,10 @@ try {
         }
     }
     
-    // 2. Vérifier dans la table client - tel OU nom
+    // 2. Vérifier dans la table client - tel seulement (car pas de colonne username)
     $query = "SELECT id_client, tel, password, nom, post_nom, prenom, type_client 
               FROM client 
-              WHERE tel = :username OR nom = :username 
+              WHERE tel = :username 
               LIMIT 1";
     
     $stmt = $bd->prepare($query);
@@ -185,7 +185,7 @@ try {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Erreur de connexion à la base de données',
+        'message' => 'Erreur de connexion à la base de données: ' . $e->getMessage(),
         'timestamp' => time()
     ]);
     exit();
