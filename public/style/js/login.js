@@ -22,7 +22,13 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.disabled = true;
             
             try {
-                const response = await fetch('http://localhost/votre_projet/backend/auth/login.php', {
+                // URL dynamique selon l'environnement
+                const baseUrl = window.location.origin;
+                const apiUrl = `${baseUrl}/backend/auth/login.php`;
+                
+                console.log('Envoi vers:', apiUrl);
+                
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -30,23 +36,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: JSON.stringify({
                         username: username,
                         password: password
-                    })
+                    }),
+                    credentials: 'include' // Important pour les sessions
                 });
                 
                 const result = await response.json();
+                console.log('Réponse API:', result);
                 
                 if (result.success) {
                     showMessage(result.message, 'success');
                     
-                    // Stocker les informations de l'utilisateur
-                    localStorage.setItem('user', JSON.stringify(result.data));
-                    
-                    // Rediriger selon le type d'utilisateur
+                    // Rediriger après succès
                     setTimeout(() => {
                         if (result.data.user_type === 'admin') {
-                            window.location.href = '../admin/dashboard.php';
+                            window.location.href = result.redirect || '/admin/index.php';
                         } else {
-                            window.location.href = '../client/dashboard.php';
+                            window.location.href = result.redirect || '/client/dashboard.php';
                         }
                     }, 1500);
                 } else {
@@ -63,6 +68,34 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Fonction pour vérifier la session au chargement
+    async function checkSession() {
+        try {
+            const baseUrl = window.location.origin;
+            const response = await fetch(`${baseUrl}/backend/auth/check_session.php`, {
+                credentials: 'include'
+            });
+            const result = await response.json();
+            
+            if (result.is_logged_in) {
+                console.log('Utilisateur déjà connecté:', result.user);
+                // Rediriger si déjà connecté
+                if (window.location.pathname.includes('login')) {
+                    if (result.user.user_type === 'admin') {
+                        window.location.href = '/admin/dashboard.php';
+                    } else {
+                        window.location.href = '/client/dashboard.php';
+                    }
+                }
+            }
+        } catch (error) {
+            console.log('Session non vérifiée:', error);
+        }
+    }
+    
+    // Vérifier la session au chargement
+    checkSession();
     
     // Fonction pour afficher les messages
     function showMessage(message, type) {

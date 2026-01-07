@@ -1,4 +1,4 @@
-name: 🚀 Déployer SalaCope - Public à la racine
+name: 🚀 Déployer SalaCope - Public à la racine (Incrémental)
 
 on:
   push:
@@ -12,12 +12,19 @@ jobs:
     steps:
     - name: 📥 Télécharger le code
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Pour voir l'historique des changements
       
-    - name: 📋 Analyser la structure actuelle
+    - name: 📋 Analyser la structure et changements
       run: |
         echo "=== STRUCTURE ACTUELLE ==="
         ls -la
         echo ""
+        
+        echo "=== CHANGEMENTS DANS CE COMMIT ==="
+        git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "Premier commit ou impossible de comparer"
+        echo ""
+        
         echo "📁 Contenu de public/ :"
         ls -la public/ 2>/dev/null || echo "Dossier public/ non trouvé"
         
@@ -32,11 +39,11 @@ jobs:
         if [ -d "public" ]; then
           echo "📦 Copie du contenu de public/ vers la racine..."
           cp -r public/* deploy_temp/ 2>/dev/null || true
-          cp -r public/.* deploy_temp/ 2>/dev/null || true
           
-          # Vérifier
-          echo "✅ Contenu copié. Fichiers à la racine :"
-          ls -la deploy_temp/ | head -10
+          # Copier les fichiers cachés sauf .git
+          find public/ -name ".*" ! -name ".git" ! -name ".gitignore" -exec cp --parents {} deploy_temp/ \; 2>/dev/null || true
+          
+          echo "✅ Contenu de public/ copié à la racine"
         fi
         
         # 2. Ajouter les dossiers admin/ et backend/ à côté
@@ -54,10 +61,10 @@ jobs:
         
         # Afficher la structure finale
         echo ""
-        echo "=== STRUCTURE FINALE (sur le serveur) ==="
-        ls -la deploy_temp/
+        echo "=== STRUCTURE À DÉPLOYER ==="
+        ls -la deploy_temp/ | head -15
         
-    - name: 🚀 Déployer sur InfinityFree
+    - name: 🚀 Déployer sur InfinityFree (Incrémental)
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -71,14 +78,22 @@ jobs:
           **/.github/*
           **/*.sql
           **/node_modules/
-        dangerous-clean-slate: true  # Nettoie tout avant
+          **/vendor/
+        # IMPORTANT : FALSE pour ne pas tout supprimer
+        dangerous-clean-slate: false  # ⬅️ CHANGE ICI !
+        # Activation du mode incrémental
+        state-name: salacope-deploy-state.json
+        log-level: normal
+        dry-run: false
         
-    - name: 🧹 Nettoyer
-      run: rm -rf deploy_temp
+    - name: 🧹 Nettoyer temporaire
+      run: |
+        rm -rf deploy_temp
+        echo "✅ Fichiers temporaires nettoyés"
       
     - name: ✅ Confirmation
       run: |
-        echo "🎉 DÉPLOIEMENT RÉUSSI !"
+        echo "🎉 DÉPLOIEMENT INCRÉMENTAL RÉUSSI !"
         echo ""
         echo "📁 STRUCTURE SUR LE SERVEUR :"
         echo "htdocs/"
@@ -88,13 +103,15 @@ jobs:
         echo "├── admin/             (dossier complet)"
         echo "└── backend/           (dossier complet)"
         echo ""
+        echo "✅ SEULS LES FICHIERS MODIFIÉS ONT ÉTÉ MISE À JOUR"
+        echo "✅ LES FICHIERS EXISTANTS N'ONT PAS ÉTÉ SUPPRIMÉS"
+        echo ""
         echo "🔗 URLS D'ACCÈS :"
         echo "• Site principal : https://salacope.infinityfreeapp.com/"
         echo "• Interface admin : https://salacope.infinityfreeapp.com/admin/"
         echo "• Backend API : https://salacope.infinityfreeapp.com/backend/"
         echo ""
-        echo "⚠️  IMPORTANT :"
-        echo "Le dossier public/ a été 'déplié' à la racine"
-        echo "Ses fichiers sont maintenant directement accessibles"
-        echo ""
         echo "🕐 Déployé le : $(date)"
+        echo ""
+        echo "💡 Astuce : Pour un nettoyage complet, déclenchez manuellement"
+        echo "avec 'workflow_dispatch' et modifiez dangerous-clean-slate: true"

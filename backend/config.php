@@ -30,12 +30,10 @@ try {
         PDO::ATTR_EMULATE_PREPARES => false,
     ];
     
-    $pdo = new PDO($dsn, $username, $password, $options);
+    $bd = new PDO($dsn, $username, $password, $options);
     
-    echo "✅ Connexion à la base de données réussie !";
-    
+
 } catch (PDOException $e) {
     die("❌ Échec de connexion : " . $e->getMessage());
 }
 
-// La variable $pdo est maintenant disponible pour vos requêtes
