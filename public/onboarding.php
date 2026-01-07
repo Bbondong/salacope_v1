@@ -165,7 +165,7 @@ $_SESSION['onboarding_started'] = true;
         
         // Rediriger selon l'action
         if (action === 'register') {
-            window.location.href = '/auth/register.php';
+            window.location.href = '/auth/inscription.php';
         } else if (action === 'login') {
             window.location.href = '/auth/login.php';
         } else {
