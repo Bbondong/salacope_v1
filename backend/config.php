@@ -1,28 +1,51 @@
 <?php
-// config.php - Connexion PDO avec fichier .env
+// config.php - Version simplifiée
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
 
-// Chemin vers le fichier .env (dans la racine)
+// Chemin .env
 $envFile = dirname(__DIR__) . '/.env';
 
 if (!file_exists($envFile)) {
-    die("❌ Erreur : Fichier .env non trouvé à l'emplacement : $envFile");
+    http_response_code(500);
+    header('Content-Type: application/json');
+    die(json_encode([
+        'success' => false,
+        'message' => 'Fichier .env manquant',
+        'timestamp' => time()
+    ]));
 }
 
-$envVariables = parse_ini_file($envFile);
-
-if ($envVariables === false) {
-    die("❌ Erreur : Impossible de lire le fichier .env");
+$env = parse_ini_file($envFile);
+if (!$env) {
+    http_response_code(500);
+    header('Content-Type: application/json');
+    die(json_encode([
+        'success' => false,
+        'message' => 'Erreur lecture .env',
+        'timestamp' => time()
+    ]));
 }
 
-// Récupérer les variables
-$host = $envVariables['DB_HOST'] ?? 'localhost';
-$dbname = $envVariables['DB_NAME'] ?? '';
-$username = $envVariables['DB_USER'] ?? '';
-$password = $envVariables['DB_PASS'] ?? '';
-$charset = $envVariables['DB_CHARSET'] ?? 'utf8mb4';
+// Variables
+$host = $env['DB_HOST'] ?? '';
+$dbname = $env['DB_NAME'] ?? '';
+$username = $env['DB_USER'] ?? '';
+$password = $env['DB_PASS'] ?? '';
+$charset = $env['DB_CHARSET'] ?? 'utf8mb4';
+
+// Vérification
+if (empty($host) || empty($dbname) || empty($username)) {
+    http_response_code(500);
+    header('Content-Type: application/json');
+    die(json_encode([
+        'success' => false,
+        'message' => 'Configuration base de données incomplète',
+        'timestamp' => time()
+    ]));
+}
 
 try {
-    // Création de la connexion PDO
     $dsn = "mysql:host=$host;dbname=$dbname;charset=$charset";
     $options = [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -32,8 +55,13 @@ try {
     
     $bd = new PDO($dsn, $username, $password, $options);
     
-
 } catch (PDOException $e) {
-    die("❌ Échec de connexion : " . $e->getMessage());
+    http_response_code(500);
+    header('Content-Type: application/json');
+    die(json_encode([
+        'success' => false,
+        'message' => 'Erreur connexion base de données',
+        'timestamp' => time()
+    ]));
 }
-
+?>
