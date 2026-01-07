@@ -28,7 +28,7 @@ checkAdminSession();
 $admin_id = $_SESSION['admin_id'] ?? 1;
 $admin_name = $_SESSION['admin_name'] ?? 'Benjamin Tech';
 $admin_role = $_SESSION['admin_role'] ?? 'Propriétaire';
-$admin_avatar = $_SESSION['admin_avatar'] ?? '../assets/admin_avatar.jpg';
+$admin_avatar = $_SESSION['admin_avatar'] ?? '../assets/img_log/logo.jpg';
 
 // Déterminer la page à afficher
 $page = $_GET['page'] ?? 'dashboard';
@@ -71,7 +71,7 @@ $page_title = $page_titles[$page] ?? 'Tableau de bord';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.css">
     
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="assets/img_log/logo.jpg">
 </head>
 <body>
     <?php include 'header.php'; ?>

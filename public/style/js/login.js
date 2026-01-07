@@ -83,9 +83,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Rediriger si déjà connecté
                 if (window.location.pathname.includes('login')) {
                     if (result.user.user_type === 'admin') {
-                        window.location.href = '/admin/dashboard.php';
-                    } else {
-                        window.location.href = '/client/dashboard.php';
+                        window.location.href = '/admin/index.php';
+                    }
+                if (result.user.user_type === 'vendeur') {
+                        window.location.href = '/vendeur/index.php';
+                    } 
+                     else {
+                        window.location.href = '/clients/index.php';
                     }
                 }
             }

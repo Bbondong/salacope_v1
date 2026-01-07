@@ -99,7 +99,7 @@ try {
                     'user_type' => 'admin',
                     'session_id' => session_id()
                 ],
-                'redirect' => '/admin/dashboard.php',
+                'redirect' => '/admin/index.php',
                 'timestamp' => time()
             ]);
             exit();
@@ -107,7 +107,7 @@ try {
     }
     
     // 2. Vérifier dans la table client
-    $query = "SELECT id_client, tel, password, nom, post_nom, prenom FROM client WHERE tel = :username OR nom = :username LIMIT 1";
+    $query = "SELECT id_client, tel, password, nom, post_nom, prenom , type_client FROM client WHERE tel = :username OR nom = :username LIMIT 1";
     $stmt = $bd->prepare($query);
     $stmt->execute([':username' => $username]);
     
@@ -136,7 +136,7 @@ try {
                 'post_nom' => $user['post_nom'],
                 'prenom' => $user['prenom']
             ];
-            $_SESSION['user_type'] = 'client';
+            $_SESSION['user_type'] = $user['type_client'];
             $_SESSION['client_logged_in'] = true;
             $_SESSION['login_time'] = time();
             
@@ -154,7 +154,7 @@ try {
                         'post_nom' => $user['post_nom'],
                         'prenom' => $user['prenom']
                     ],
-                    'user_type' => 'client',
+                    'user_type' => $user['type_client'],
                     'session_id' => session_id()
                 ],
                 'redirect' => '/client/dashboard.php',
