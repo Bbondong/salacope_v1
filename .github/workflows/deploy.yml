@@ -1,4 +1,4 @@
-name: 🧹 Déploiement COMPLET SalaCope
+name: 🚀 Déploiement SalaCope - Garanti
 
 on:
   push:
@@ -10,126 +10,72 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: 📥 Télécharger le code
+    - name: 📥 Télécharger TOUT le code
       uses: actions/checkout@v3
-      
-    - name: 📊 Analyser la structure
+      with:
+        fetch-depth: 0  # Télécharge tout l'historique
+        
+    - name: 📊 VÉRIFIER ce qui est téléchargé
       run: |
-        echo "=== STRUCTURE DU PROJET ==="
-        ls -la
+        echo "=== VÉRIFICATION DES FICHIERS ==="
+        echo ""
+        echo "📁 Liste COMPLÈTE des fichiers :"
+        find . -type f -name "*.php" | head -20
         echo ""
         
-        echo "📁 Détails des dossiers :"
-        echo "public/ :"
-        find public/ -type f -name "*.php" -o -name "*.js" -o -name "*.css" -o -name "*.html" 2>/dev/null | head -10
+        echo "📦 Contenu de public/ :"
+        ls -la public/ 2>/dev/null || echo "public/ non trouvé"
         echo ""
         
-        echo "admin/ :"
-        find admin/ -type f -name "*.php" 2>/dev/null | head -10
+        echo "👑 Contenu de admin/ :"
+        ls -la admin/ 2>/dev/null || echo "admin/ non trouvé"
         echo ""
         
-        echo "backend/ :"
-        find backend/ -type f -name "*.php" 2>/dev/null | head -10
+        echo "⚙️ Contenu de backend/ :"
+        ls -la backend/ 2>/dev/null || echo "backend/ non trouvé"
+        echo ""
         
-    - name: 🧹 SUPPRIMER TOUT sur le serveur
+        echo "📈 Statistiques :"
+        echo "Fichiers PHP : $(find . -name '*.php' | wc -l)"
+        echo "Fichiers JS : $(find . -name '*.js' | wc -l)"
+        echo "Fichiers CSS : $(find . -name '*.css' | wc -l)"
+        
+    - name: 🚀 DÉPLOYER TOUT le contenu
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./          # Dossier source
-        server-dir: ./htdocs/  # Dossier destination
+        local-dir: ./                    # TOUT depuis la racine
+        server-dir: ./htdocs/            # Vers la racine du serveur
         exclude: |
-          **/.git*
+          **/.git/
+          **/.github/
+          **/.gitignore
           **/.env*
-          **/.github/*
-        # ⚠️ NETTOYAGE COMPLET AVANT :
-        dangerous-clean-slate: true  # ⬅️ SUPPRIME TOUT AVANT
-        dry-run: false
-        log-level: verbose
+          **/README.md
+          **/LICENSE
+        # ⚠️ IMPORTANT : Ces paramètres
+        dangerous-clean-slate: true      # Nettoie TOUT avant
+        dry-run: false                   # Exécute vraiment
+        log-level: verbose               # Voir les détails
+        state-name: deploy-state.json
         
-    - name: 🔧 Préparer structure finale
-      run: |
-        echo "🔨 Préparation de la structure finale..."
-        
-        # Créer un dossier pour la structure finale
-        mkdir -p final_build
-        
-        # 1. Copier le contenu de public/ à la racine
-        if [ -d "public" ]; then
-          echo "📦 Déploiement de public/ à la racine..."
-          cp -r public/* final_build/ 2>/dev/null || true
-          # Copier les fichiers cachés (.htaccess, etc.)
-          find public/ -name ".*" ! -name ".git*" -exec cp --parents {} final_build/ \; 2>/dev/null || true
-        fi
-        
-        # 2. Copier admin/ et backend/
-        if [ -d "admin" ]; then
-          echo "👑 Copie du dossier admin/..."
-          cp -r admin final_build/
-        fi
-        
-        if [ -d "backend" ]; then
-          echo "⚙️ Copie du dossier backend/..."
-          cp -r backend final_build/
-        fi
-        
-        # Créer un fichier info
-        echo "Déploiement du: $(date)" > final_build/deploy_info.txt
-        echo "Commit: ${{ github.sha }}" >> final_build/deploy_info.txt
-        
-        echo ""
-        echo "✅ Structure préparée :"
-        ls -la final_build/
-        
-    - name: 🚀 DÉPLOYER la nouvelle version
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./final_build/  # Notre structure préparée
-        server-dir: ./htdocs/      # Racine du serveur
-        exclude: |
-          **/.git*
-          **/.env*
-          **/.github/*
-        # IMPORTANT : false car on a déjà nettoyé
-        dangerous-clean-slate: false
-        log-level: normal
-        
-    - name: 🧽 Nettoyer les temporaires
-      run: |
-        rm -rf final_build
-        echo "✅ Fichiers temporaires nettoyés"
-        
-    - name: ✅ Vérification finale
+    - name: ✅ VÉRIFIER le déploiement
       run: |
         echo ""
-        echo "🎉🎉🎉 DÉPLOIEMENT COMPLET RÉUSSI ! 🎉🎉🎉"
+        echo "✅ DÉPLOIEMENT EXÉCUTÉ"
         echo ""
-        echo "🧹 ACTION EFFECTUÉE :"
-        echo "1. ✅ TOUS les anciens fichiers ont été SUPPRIMÉS"
-        echo "2. ✅ NOUVELLE version copiée"
-        echo "3. ✅ Structure réinitialisée"
+        echo "📋 Fichiers déployés :"
+        echo "- Tous les fichiers PHP, HTML, CSS, JS"
+        echo "- Dossiers : public/, admin/, backend/"
+        echo "- Fichiers images, etc."
         echo ""
-        echo "📁 STRUCTURE FINALE sur le serveur :"
-        echo "htdocs/"
-        echo "├── index.php          (anciennement dans public/)"
-        echo "├── .htaccess          (si présent dans public/)"
-        echo "├── css/               (si présent)"
-        echo "├── js/                (si présent)"
-        echo "├── images/            (si présent)"
-        echo "├── admin/             (dossier complet)"
-        echo "├── backend/           (dossier complet)"
-        echo "└── deploy_info.txt    (info du déploiement)"
+        echo "❌ Fichiers EXCLUS :"
+        echo "- .git/, .github/"
+        echo "- .env, README.md"
         echo ""
-        echo "🔗 TES URLS :"
-        echo "• Site : https://salacope.infinityfreeapp.com/"
-        echo "• Admin : https://salacope.infinityfreeapp.com/admin/"
-        echo "• Backend : https://salacope.infinityfreeapp.com/backend/"
-        echo ""
-        echo "⚠️ ATTENTION :"
-        echo "Toutes les sessions, uploads, logs ont été supprimés !"
-        echo ""
-        echo "🕐 Dernier déploiement : $(date '+%d/%m/%Y %H:%M:%S')"
+        echo "🌐 Testez immédiatement :"
+        echo "https://salacope.infinityfreeapp.com/"
+        echo "https://salacope.infinityfreeapp.com/backend/config.php"
+        echo "https://salacope.infinityfreeapp.com/admin/"
