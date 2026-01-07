@@ -1,0 +1,157 @@
+name: 🚀 Déploiement SalaCop - Public à la racine
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Télécharger le code
+      uses: actions/checkout@v3
+      
+    - name: 📊 Vérifier la structure
+      run: |
+        echo "=== STRUCTURE LOCALE ==="
+        ls -la
+        echo ""
+        
+        echo "📁 Contenu de public/ :"
+        ls -la public/ 2>/dev/null || echo "⚠️ Dossier public/ non trouvé"
+        echo ""
+        
+        echo "👑 Contenu de admin/ :"
+        ls -la admin/ 2>/dev/null || echo "⚠️ Dossier admin/ non trouvé"
+        echo ""
+        
+        echo "⚙️ Contenu de backend/ :"
+        ls -la backend/ 2>/dev/null || echo "⚠️ Dossier backend/ non trouvé"
+        
+    - name: 🏗️ Construire la structure finale
+      run: |
+        echo "🏗️ Construction de la structure pour InfinityFree..."
+        
+        # Créer un dossier temporaire avec la structure finale
+        mkdir -p site_structure
+        
+        # ÉTAPE 1 : Déplacer le contenu de public/ à la racine
+        if [ -d "public" ]; then
+          echo "📦 ÉTAPE 1 : Déplacement de public/ vers la racine..."
+          
+          # Copier tous les fichiers et dossiers de public/ à la racine
+          if [ "$(ls -A public/ 2>/dev/null)" ]; then
+            cp -r public/* site_structure/ 2>/dev/null || echo "Certains fichiers non copiés"
+          fi
+          
+          # Copier les fichiers cachés (.htaccess, etc.)
+          if [ -f "public/.htaccess" ]; then
+            cp public/.htaccess site_structure/
+            echo "✅ .htaccess copié"
+          fi
+          
+          echo "✅ Contenu de public/ déplacé à la racine"
+          echo "   Fichiers à la racine :"
+          ls -la site_structure/ | head -20
+        else
+          echo "❌ ERREUR : Dossier public/ non trouvé !"
+          exit 1
+        fi
+        
+        # ÉTAPE 2 : Ajouter admin/ à côté
+        if [ -d "admin" ]; then
+          echo ""
+          echo "👑 ÉTAPE 2 : Ajout du dossier admin/..."
+          cp -r admin site_structure/
+          echo "✅ Dossier admin/ ajouté"
+          echo "   Contenu :"
+          ls -la site_structure/admin/ | head -10
+        fi
+        
+        # ÉTAPE 3 : Ajouter backend/ à côté
+        if [ -d "backend" ]; then
+          echo ""
+          echo "⚙️ ÉTAPE 3 : Ajout du dossier backend/..."
+          cp -r backend site_structure/
+          echo "✅ Dossier backend/ ajouté"
+          echo "   Contenu :"
+          ls -la site_structure/backend/ | head -10
+        fi
+        
+        # Créer un fichier info
+        echo "Dernier déploiement : $(date)" > site_structure/deploy_info.txt
+        echo "Commit : ${{ github.sha }}" >> site_structure/deploy_info.txt
+        
+        echo ""
+        echo "🎯 STRUCTURE FINALE PRÊTE :"
+        echo "=========================="
+        ls -la site_structure/
+        echo ""
+        echo "📁 Arborescence :"
+        find site_structure/ -type f -name "*.php" | head -20
+        
+    - name: 🚀 DÉPLOYER sur InfinityFree
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./site_structure/    # Notre structure construite
+        server-dir: ./htdocs/           # Racine du serveur
+        exclude: |
+          **/.git*
+          **/.env*
+          **/.github/*
+          **/*.sql
+        # SUPPRIME TOUT ET COPIER LE NOUVEAU
+        dangerous-clean-slate: true     # ⚠️ Nettoie tout avant
+        dry-run: false
+        log-level: verbose
+        
+    - name: 🧹 Nettoyer les temporaires
+      run: |
+        rm -rf site_structure
+        echo "✅ Fichiers temporaires nettoyés"
+        
+    - name: ✅ Confirmation finale
+      run: |
+        echo ""
+        echo "🎉🎉🎉 DÉPLOIEMENT RÉUSSI ! 🎉🎉🎉"
+        echo ""
+        echo "📁 STRUCTURE SUR LE SERVEUR :"
+        echo "============================="
+        echo "htdocs/"
+        echo "├── index.php              (venant de public/index.php)"
+        echo "├── style.css              (venant de public/style.css)"
+        echo "├── script.js              (venant de public/script.js)"
+        echo "├── images/                (venant de public/images/)"
+        echo "├── .htaccess              (venant de public/.htaccess)"
+        echo "├── admin/                 (dossier complet)"
+        echo "│   ├── dashboard.php"
+        echo "│   ├── users.php"
+        echo "│   └── ..."
+        echo "├── backend/               (dossier complet)"
+        echo "│   ├── config.php"
+        echo "│   ├── auth/"
+        echo "│   │   ├── login.php"
+        echo "│   │   └── logout.php"
+        echo "│   └── ..."
+        echo "└── deploy_info.txt"
+        echo ""
+        echo "🔗 TES URLS D'ACCÈS :"
+        echo "====================="
+        echo "🌐 Site principal : https://salacope.infinityfreeapp.com/"
+        echo "   (anciennement https://salacope.infinityfreeapp.com/public/)"
+        echo ""
+        echo "👑 Administration : https://salacope.infinityfreeapp.com/admin/"
+        echo ""
+        echo "⚙️ Backend API : https://salacope.infinityfreeapp.com/backend/"
+        echo ""
+        echo "📊 Vérifications :"
+        echo "• https://salacope.infinityfreeapp.com/ (doit afficher ton index)"
+        echo "• https://salacope.infinityfreeapp.com/admin/ (doit afficher admin)"
+        echo "• https://salacope.infinityfreeapp.com/backend/config.php (doit afficher config)"
+        echo ""
+        echo "🕐 Dernière mise à jour : $(date '+%d/%m/%Y à %H:%M:%S')"

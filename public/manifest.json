@@ -1,0 +1,29 @@
+{
+    "name": "SalaCope Marketplace",
+    "short_name": "SalaCope",
+    "description": "Marketplace congolais",
+    "start_url": "/index.php",
+    "display": "standalone",
+    "background_color": "#10B981",
+    "theme_color": "#10B981",
+    "orientation": "portrait",
+    "icons": [
+      {
+        "src": "/images/icon-72.png",
+        "sizes": "72x72",
+        "type": "image/png"
+      },
+      {
+        "src": "/images/icon-192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      },
+      {
+        "src": "/images/icon-512.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ],
+    "categories": ["shopping", "business"],
+    "prefer_related_applications": false
+  }
