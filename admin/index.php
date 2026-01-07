@@ -4,12 +4,26 @@
 // Démarrer la session
 session_start();
 
-// Vérifier si l'utilisateur est connecté
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header('Location: ../');
-    exit();
+function checkAdminSession() {
+    if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+        // Rediriger vers la page de login
+        header('Location: /');
+        exit();
+    }
+    
+    // Vérifier le timeout de session (1 heure)
+    if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600)) {
+        session_destroy();
+        header('Location: /?session_expired=1');
+        exit();
+    }
+    
+    // Renouveler le temps de session
+    $_SESSION['login_time'] = time();
 }
 
+// Appliquer la vérification
+checkAdminSession();
 // Récupérer les informations de l'admin
 $admin_id = $_SESSION['admin_id'] ?? 1;
 $admin_name = $_SESSION['admin_name'] ?? 'Benjamin Tech';
