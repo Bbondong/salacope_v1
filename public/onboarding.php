@@ -80,7 +80,7 @@ $_SESSION['onboarding_started'] = true;
         <!-- Slide 1 -->
         <div class="slide active" id="slide1">
             <div class="slide-icon">🛍️</div>
-            <h2>Bienvenue sur SalaCope</h2>
+            <h2>Bienvenue sur SalaCop</h2>
             <p>La marketplace camerounaise pour tous vos besoins</p>
         </div>
         
