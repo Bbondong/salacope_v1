@@ -103,7 +103,7 @@ try {
     logDebug("Connexion BDD établie");
     
     // 1. Vérifier dans la table admin - Num seulement (car pas de colonne username)
-    $query = "SELECT admin_id, Num, password, admin_name, admin_role 
+    $query = "SELECT *
               FROM admin 
               WHERE Num = :username 
               LIMIT 1";
@@ -159,7 +159,7 @@ try {
     }
     
     // 2. Vérifier dans la table client - tel seulement (car pas de colonne username)
-    $query = "SELECT id_client, tel, password, nom, post_nom, prenom, type_client 
+    $query = "SELECT *
               FROM client 
               WHERE tel = :username 
               LIMIT 1";
