@@ -126,12 +126,7 @@
                                 <input type="tel" id="telephone" name="telephone" required placeholder="Ex: +243 00 000 0000">
                                 <div class="error-message"></div>
                             </div>
-                            
-                            <div class="form-group full-width">
-                                <label for="email">Adresse email *</label>
-                                <input type="email" id="email" name="email" required placeholder="votre@email.com">
-                                <div class="error-message"></div>
-                            </div>
+                    
                         </div>
                     </div>
                     
@@ -166,19 +161,7 @@
                                     <input type="text" id="adresse_entreprise" name="adresse_entreprise" required placeholder="Adresse complète de l'entreprise">
                                     <div class="error-message"></div>
                                 </div>
-                                
-                                <div class="form-group full-width">
-                                    <label for="type_entreprise">Type d'entreprise *</label>
-                                    <select id="type_entreprise" name="type_entreprise" required>
-                                        <option value="">Sélectionnez un type</option>
-                                        <option value="SARL">SARL</option>
-                                        <option value="SA">SA</option>
-                                        <option value="SNC">SNC</option>
-                                        <option value="EI">Entreprise Individuelle</option>
-                                        <option value="autre">Autre</option>
-                                    </select>
-                                    <div class="error-message"></div>
-                                </div>
+            
                             </div>
                         </div>
                         
