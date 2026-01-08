@@ -3,12 +3,6 @@
 error_reporting(0);
 ini_set('display_errors', 0);
 
-// Fonction de log minimal pour déboguer
-function logDebug($message) {
-    $logFile = __DIR__ . '/../logs/debug_login.log';
-    @file_put_contents($logFile, date('Y-m-d H:i:s') . " - " . $message . "\n", FILE_APPEND);
-}
-
 // Vérifier si session déjà démarrée
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -63,11 +57,7 @@ if (!$data || !isset($data['username']) || !isset($data['password'])) {
 }
 
 $username = trim($data['username']);
-$password = $data['password']; // NE PAS TRIMMER le mot de passe !
-
-logDebug("=== NOUVELLE TENTATIVE ===");
-logDebug("Username reçu: '$username'");
-logDebug("Password reçu (longueur): " . strlen($password) . " caractères");
+$password = $data['password']; // Ne pas trimmer le mot de passe
 
 if (empty($username) || empty($password)) {
     http_response_code(400);
@@ -83,10 +73,10 @@ if (empty($username) || empty($password)) {
 require_once __DIR__ . '/../config.php';
 
 try {
-    // 1. Vérifier dans la table admin
+    // 1. Vérifier dans la table admin - Num OU admin_name
     $query = "SELECT admin_id, Num, password, admin_name, admin_role 
               FROM admin 
-              WHERE Num = :username 
+              WHERE Num = :username OR admin_name = :username 
               LIMIT 1";
     
     $stmt = $bd->prepare($query);
@@ -94,25 +84,15 @@ try {
     
     if ($stmt->rowCount() > 0) {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        logDebug("Admin trouvé: " . $user['Num']);
-        logDebug("Hash DB complet: " . $user['password']);
-        logDebug("Longueur hash: " . strlen($user['password']) . " caractères");
+        
+        // DEBUG: Compte admin trouvé
+        $debug_message = "✅ Compte ADMIN trouvé: " . $user['admin_name'] . " (Num: " . $user['Num'] . ")";
         
         // Vérifier le mot de passe
-        $testPassword = "Test manuel avec même mot de passe: ";
-        $testPassword .= password_verify('votre_mot_de_passe', $user['password']) ? 'OK' : 'ECHEC';
-        logDebug($testPassword);
-        
-        $passwordValid = password_verify($password, $user['password']);
-        logDebug("password_verify avec données reçues: " . ($passwordValid ? 'OK' : 'ECHEC'));
-        
-        // Test alternative - afficher les caractères du mot de passe
-        logDebug("Caractères password (décimal):");
-        for ($i = 0; $i < strlen($password); $i++) {
-            logDebug("  [$i]: " . ord($password[$i]) . " ('" . $password[$i] . "')");
-        }
-        
-        if ($passwordValid) {
+        if (password_verify($password, $user['password'])) {
+            // DEBUG: Mot de passe correct
+            $debug_message .= " - ✅ Mot de passe CORRECT";
+            
             // Session admin
             $_SESSION['user_id'] = $user['admin_id'];
             $_SESSION['username'] = $user['Num'];
@@ -122,11 +102,10 @@ try {
             $_SESSION['admin_logged_in'] = true;
             $_SESSION['login_time'] = time();
             
-            logDebug("✅ Connexion admin réussie!");
-            
             echo json_encode([
                 'success' => true,
                 'message' => 'Connexion admin réussie',
+                'debug' => $debug_message,
                 'data' => [
                     'user_id' => $user['admin_id'],
                     'username' => $user['Num'],
@@ -139,29 +118,26 @@ try {
             ]);
             exit();
         } else {
-            logDebug("❌ Échec password_verify");
+            // DEBUG: Mot de passe incorrect
+            $debug_message .= " - ❌ Mot de passe INCORRECT";
             
-            // Test avec différentes variations du mot de passe
-            $variations = [
-                'trim' => trim($password),
-                'rtrim' => rtrim($password),
-                'ltrim' => ltrim($password),
-                'no_change' => $password
-            ];
-            
-            foreach ($variations as $name => $variant) {
-                $result = password_verify($variant, $user['password']) ? 'OK' : 'ECHEC';
-                logDebug("Test '$name': $result (longueur: " . strlen($variant) . ")");
-            }
+            echo json_encode([
+                'success' => false,
+                'message' => 'Mot de passe incorrect',
+                'debug' => $debug_message,
+                'timestamp' => time()
+            ]);
+            exit();
         }
     } else {
-        logDebug("Aucun admin trouvé avec username: '$username'");
+        // DEBUG: Aucun admin trouvé
+        $debug_message = "ℹ️ Aucun compte ADMIN trouvé avec: '$username'";
     }
     
-    // 2. Vérifier dans la table client
+    // 2. Vérifier dans la table client - tel OU nom
     $query = "SELECT id_client, tel, password, nom, post_nom, prenom, type_client 
               FROM client 
-              WHERE tel = :username 
+              WHERE tel = :username OR nom = :username 
               LIMIT 1";
     
     $stmt = $bd->prepare($query);
@@ -169,29 +145,36 @@ try {
     
     if ($stmt->rowCount() > 0) {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        logDebug("Client trouvé: " . $user['tel']);
-        logDebug("Hash client DB: " . $user['password']);
+        
+        // DEBUG: Compte client trouvé
+        $debug_message = "✅ Compte CLIENT trouvé: " . $user['nom'] . " " . $user['post_nom'] . " (Tel: " . $user['tel'] . ")";
         
         // Vérifier le mot de passe
         $passwordValid = false;
+        $isPlainText = false;
         
-        // Essayer password_verify d'abord
         if (password_verify($password, $user['password'])) {
             $passwordValid = true;
-            logDebug("password_verify client: OK");
-        } 
-        // Essayer sans trim
-        elseif (password_verify(trim($password), $user['password'])) {
+            $debug_message .= " - ✅ Mot de passe CORRECT (hashé)";
+        } elseif ($password === $user['password']) {
             $passwordValid = true;
-            logDebug("password_verify avec trim: OK");
-        }
-        // Essayer en clair
-        elseif ($password === $user['password']) {
-            $passwordValid = true;
-            logDebug("Mot de passe en clair: OK");
+            $isPlainText = true;
+            $debug_message .= " - ✅ Mot de passe CORRECT (en clair)";
         }
         
         if ($passwordValid) {
+            // Si mot de passe en clair, le hasher
+            if ($isPlainText) {
+                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                $updateQuery = "UPDATE client SET password = :hashedPassword WHERE id_client = :id";
+                $updateStmt = $bd->prepare($updateQuery);
+                $updateStmt->execute([
+                    ':hashedPassword' => $hashedPassword,
+                    ':id' => $user['id_client']
+                ]);
+                $debug_message .= " - 🔄 Mot de passe migré vers hash sécurisé";
+            }
+            
             // Session client
             $_SESSION['user_id'] = $user['id_client'];
             $_SESSION['username'] = $user['tel'];
@@ -200,11 +183,10 @@ try {
             $_SESSION['client_logged_in'] = true;
             $_SESSION['login_time'] = time();
             
-            logDebug("✅ Connexion client réussie!");
-            
             echo json_encode([
                 'success' => true,
                 'message' => 'Connexion client réussie',
+                'debug' => $debug_message,
                 'data' => [
                     'user_id' => $user['id_client'],
                     'username' => $user['tel'],
@@ -215,36 +197,61 @@ try {
                 'timestamp' => time()
             ]);
             exit();
+        } else {
+            // DEBUG: Mot de passe incorrect
+            $debug_message .= " - ❌ Mot de passe INCORRECT";
+            
+            // Ajouter des informations de débogage supplémentaires
+            $debug_message .= " (Hash dans BD: " . substr($user['password'], 0, 20) . "...)";
+            
+            echo json_encode([
+                'success' => false,
+                'message' => 'Mot de passe incorrect',
+                'debug' => $debug_message,
+                'timestamp' => time()
+            ]);
+            exit();
         }
     } else {
-        logDebug("Aucun client trouvé avec username: '$username'");
+        // DEBUG: Aucun client trouvé
+        if (isset($debug_message)) {
+            $debug_message .= " | ℹ️ Aucun compte CLIENT trouvé avec: '$username'";
+        } else {
+            $debug_message = "ℹ️ Aucun compte CLIENT trouvé avec: '$username'";
+        }
     }
     
     // Aucun utilisateur trouvé
-    logDebug("❌ FINAL: Aucune connexion réussie");
+    $debug_message = "❌ Aucun compte trouvé (ni ADMIN ni CLIENT) avec: '$username'";
+    
     http_response_code(401);
     echo json_encode([
         'success' => false,
         'message' => 'Identifiants incorrects',
+        'debug' => $debug_message,
         'timestamp' => time()
     ]);
     exit();
     
 } catch(PDOException $e) {
-    logDebug("❌ ERREUR PDO: " . $e->getMessage());
+    $debug_message = "❌ ERREUR BDD: " . $e->getMessage();
+    
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'message' => 'Erreur de connexion à la base de données',
+        'debug' => $debug_message,
         'timestamp' => time()
     ]);
     exit();
 } catch(Exception $e) {
-    logDebug("❌ ERREUR GENERALE: " . $e->getMessage());
+    $debug_message = "❌ ERREUR SERVEUR: " . $e->getMessage();
+    
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'message' => 'Erreur serveur',
+        'debug' => $debug_message,
         'timestamp' => time()
     ]);
     exit();
