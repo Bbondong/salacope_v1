@@ -30,8 +30,8 @@ if (!$env) {
 // Variables
 $host = $env['DB_HOST'] ?? '';
 $dbname = $env['DB_NAME'] ?? '';
-$usernames = $env['DB_USER'] ?? '';
-$password = $env['DB_PASS'] ?? '';
+$db_username = $env['DB_USER'] ?? '';
+$db_password = $env['DB_PASS'] ?? '';
 $charset = $env['DB_CHARSET'] ?? 'utf8mb4';
 
 // Vérification
@@ -53,7 +53,7 @@ try {
         PDO::ATTR_EMULATE_PREPARES => false,
     ];
     
-    $bd = new PDO($dsn, $usernames, $password, $options);
+    $bd = new PDO($dsn, $db_username, $db_password, $options);
     
 } catch (PDOException $e) {
     http_response_code(500);
