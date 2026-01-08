@@ -3,6 +3,23 @@ RewriteEngine On
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 
+# PROTECTION DU DOSSIER ADMIN/BACKEND
+# Bloquer l'accès direct au dossier admin
+RewriteCond %{REQUEST_URI} ^/admin(/|$) [NC]
+RewriteCond %{HTTP_REFERER} !^https?://%{HTTP_HOST}/ [NC]
+RewriteRule ^ - [F,L]
+
+# Bloquer l'accès aux fichiers PHP dans admin sans autorisation
+RewriteCond %{REQUEST_URI} \.php$
+RewriteCond %{REQUEST_URI} ^/admin/ [NC]
+RewriteCond %{HTTP_COOKIE} !admin_logged_in=true [NC]
+RewriteRule ^ - [F,L]
+
+# PROTECTION DU DOSSIER BACKEND (si différent de admin)
+RewriteCond %{REQUEST_URI} ^/backend(/|$) [NC]
+RewriteCond %{HTTP_REFERER} !^https?://%{HTTP_HOST}/ [NC]
+RewriteRule ^ - [F,L]
+
 # DÉSACTIVER LE CACHE pour les fichiers critiques
 <FilesMatch "\.(php|html?)$">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
@@ -60,8 +77,36 @@ Header always append X-Frame-Options SAMEORIGIN
 # Désactiver l'indexation des dossiers
 Options -Indexes
 
+# Empêcher l'accès aux dossiers spécifiques
+RedirectMatch 403 ^/admin/?$
+RedirectMatch 403 ^/backend/?$
+RedirectMatch 403 ^/includes/?$
+RedirectMatch 403 ^/config/?$
+
 # Protéger les fichiers sensibles
-<FilesMatch "\.(env|log|sql|yml|yaml)$">
+<FilesMatch "\.(env|log|sql|yml|yaml|ini|conf|config)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Protéger les fichiers PHP spécifiques
+<Files "config.php">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files "database.php">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files "credentials.php">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Bloquer l'accès aux fichiers de sauvegarde/temporaires
+<FilesMatch "\.(bak|backup|old|temp|tmp|swp)$">
     Order allow,deny
     Deny from all
 </FilesMatch>
@@ -70,3 +115,20 @@ Options -Indexes
 ErrorDocument 404 /404.html
 ErrorDocument 403 /403.html
 ErrorDocument 500 /500.html
+
+# Empêcher l'exécution de PHP dans certains dossiers
+<Directory "/admin/uploads">
+    php_flag engine off
+    <FilesMatch "\.php$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</Directory>
+
+<Directory "/backend/uploads">
+    php_flag engine off
+    <FilesMatch "\.php$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</Directory>
