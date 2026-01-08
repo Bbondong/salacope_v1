@@ -3,9 +3,22 @@
 error_reporting(0);
 ini_set('display_errors', 0);
 
+// Fonction de log
+function logDebug($message) {
+    $logFile = __DIR__ . '/../logs/login_debug.log';
+    // Créer le dossier logs s'il n'existe pas
+    if (!file_exists(dirname($logFile))) {
+        @mkdir(dirname($logFile), 0755, true);
+    }
+    @file_put_contents($logFile, date('Y-m-d H:i:s') . " - " . $message . "\n", FILE_APPEND);
+}
+
+logDebug("=== NOUVELLE TENTATIVE DE CONNEXION ===");
+
 // Vérifier si session déjà démarrée
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+    logDebug("Session démarrée");
 }
 
 // Headers CORS pour API
@@ -17,12 +30,14 @@ header('Content-Type: application/json; charset=utf-8');
 // Gérer les requêtes OPTIONS pour CORS
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
+    logDebug("Requête OPTIONS traitée");
     exit();
 }
 
 // Vérifier la méthode
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
+    logDebug("❌ Mauvaise méthode: " . $_SERVER['REQUEST_METHOD']);
     echo json_encode([
         'success' => false,
         'message' => 'Méthode POST requise',
@@ -31,10 +46,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
+logDebug("Méthode POST OK");
+
 // Récupérer les données JSON
 $input = file_get_contents('php://input');
 if (empty($input)) {
     http_response_code(400);
+    logDebug("❌ Données JSON vides");
     echo json_encode([
         'success' => false,
         'message' => 'Données JSON requises',
@@ -43,11 +61,14 @@ if (empty($input)) {
     exit();
 }
 
+logDebug("Données JSON reçues: " . substr($input, 0, 100) . "...");
+
 $data = json_decode($input, true);
 
 // Validation des données
 if (!$data || !isset($data['username']) || !isset($data['password'])) {
     http_response_code(400);
+    logDebug("❌ Champs manquants dans JSON");
     echo json_encode([
         'success' => false,
         'message' => 'Username et password requis',
@@ -57,10 +78,14 @@ if (!$data || !isset($data['username']) || !isset($data['password'])) {
 }
 
 $username = trim($data['username']);
-$password = $data['password'];
+$password = trim($data['password']);
+
+logDebug("Username reçu: '$username'");
+logDebug("Password reçu (longueur): " . strlen($password) . " caractères");
 
 if (empty($username) || empty($password)) {
     http_response_code(400);
+    logDebug("❌ Username ou password vide");
     echo json_encode([
         'success' => false,
         'message' => 'Champs non vides requis',
@@ -69,72 +94,35 @@ if (empty($username) || empty($password)) {
     exit();
 }
 
-// DEBUG: Vérifier si config.php existe
-$config_path = __DIR__ . '/../config.php';
-if (!file_exists($config_path)) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'Erreur configuration',
-        'debug' => 'Fichier config.php introuvable à: ' . $config_path,
-        'timestamp' => time()
-    ]);
-    exit();
-}
+logDebug("Champs non vides OK");
 
 // Connexion à la base de données
-try {
-    require_once $config_path;
-    
-    // DEBUG: Vérifier si $bd existe
-    if (!isset($bd)) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Erreur configuration BDD',
-            'debug' => 'Variable $bd non définie dans config.php',
-            'timestamp' => time()
-        ]);
-        exit();
-    }
-    
-    // DEBUG: Tester la connexion
-    $bd->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
-} catch (Exception $e) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'Erreur chargement configuration',
-        'debug' => 'Erreur config.php: ' . $e->getMessage(),
-        'timestamp' => time()
-    ]);
-    exit();
-}
+require_once __DIR__ . '/../config.php';
 
 try {
-    // DEBUG: Message de début
-    $debug_message = "🔍 Recherche pour: '$username'";
+    logDebug("Connexion BDD établie");
     
-    // 1. Vérifier dans la table admin - Num OU admin_name
+    // 1. Vérifier dans la table admin - Num seulement (car pas de colonne username)
     $query = "SELECT admin_id, Num, password, admin_name, admin_role 
               FROM admin 
-              WHERE Num = :username OR admin_name = :username 
+              WHERE Num = :username 
               LIMIT 1";
     
-    $debug_message .= " | Requête admin préparée";
-    
+    logDebug("Recherche admin avec Num: '$username'");
     $stmt = $bd->prepare($query);
     $stmt->execute([':username' => $username]);
     
-    $rowCount = $stmt->rowCount();
-    $debug_message .= " | Résultat admin: " . ($rowCount > 0 ? "TROUVÉ" : "NON TROUVÉ");
+    $adminCount = $stmt->rowCount();
+    logDebug("Nombre d'admins trouvés: $adminCount");
     
-    if ($rowCount > 0) {
+    if ($adminCount > 0) {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        $debug_message .= " | Admin: " . $user['admin_name'] . " (Num: " . $user['Num'] . ")";
+        logDebug("✅ ADMIN trouvé: ID=" . $user['admin_id'] . ", Nom=" . $user['admin_name'] . ", Num=" . $user['Num']);
+        logDebug("Hash password admin: " . substr($user['password'], 0, 20) . "...");
         
         // Vérifier le mot de passe
         if (password_verify($password, $user['password'])) {
-            $debug_message .= " | ✅ Mot de passe CORRECT";
+            logDebug("✅ Mot de passe ADMIN CORRECT");
             
             // Session admin
             $_SESSION['user_id'] = $user['admin_id'];
@@ -145,10 +133,11 @@ try {
             $_SESSION['admin_logged_in'] = true;
             $_SESSION['login_time'] = time();
             
+            logDebug("✅ Session admin créée - Redirection vers /admin/index.php");
+            
             echo json_encode([
                 'success' => true,
                 'message' => 'Connexion admin réussie',
-                'debug' => $debug_message,
                 'data' => [
                     'user_id' => $user['admin_id'],
                     'username' => $user['Num'],
@@ -161,40 +150,31 @@ try {
             ]);
             exit();
         } else {
-            $debug_message .= " | ❌ Mot de passe INCORRECT";
-            
-            // DEBUG supplémentaire
-            $debug_message .= " | Hash BD: " . substr($user['password'], 0, 30) . "...";
-            $debug_message .= " | Longueur: " . strlen($user['password']);
-            
-            echo json_encode([
-                'success' => false,
-                'message' => 'Mot de passe incorrect',
-                'debug' => $debug_message,
-                'timestamp' => time()
-            ]);
-            exit();
+            logDebug("❌ Mot de passe ADMIN INCORRECT");
+            logDebug("Password fourni: '$password'");
+            logDebug("Hash BD: " . $user['password']);
         }
+    } else {
+        logDebug("ℹ️ Aucun ADMIN trouvé avec Num: '$username'");
     }
     
-    // 2. Vérifier dans la table client - tel OU nom
+    // 2. Vérifier dans la table client - tel seulement (car pas de colonne username)
     $query = "SELECT id_client, tel, password, nom, post_nom, prenom, type_client 
               FROM client 
-              WHERE tel = :username OR nom = :username 
+              WHERE tel = :username 
               LIMIT 1";
     
-    $debug_message .= " | Requête client préparée";
-    
+    logDebug("Recherche client avec tel: '$username'");
     $stmt = $bd->prepare($query);
     $stmt->execute([':username' => $username]);
     
-    $rowCount = $stmt->rowCount();
-    $debug_message .= " | Résultat client: " . ($rowCount > 0 ? "TROUVÉ" : "NON TROUVÉ");
+    $clientCount = $stmt->rowCount();
+    logDebug("Nombre de clients trouvés: $clientCount");
     
-    if ($rowCount > 0) {
+    if ($clientCount > 0) {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        $debug_message .= " | Client: " . $user['nom'] . " " . $user['post_nom'] . " (Tel: " . $user['tel'] . ")";
+        logDebug("✅ CLIENT trouvé: ID=" . $user['id_client'] . ", Nom=" . $user['nom'] . " " . $user['post_nom'] . ", Tel=" . $user['tel']);
+        logDebug("Hash/Password client: " . substr($user['password'], 0, 20) . "...");
         
         // Vérifier le mot de passe
         $passwordValid = false;
@@ -202,14 +182,15 @@ try {
         
         if (password_verify($password, $user['password'])) {
             $passwordValid = true;
-            $debug_message .= " | ✅ Mot de passe CORRECT (hashé)";
+            logDebug("✅ Mot de passe CLIENT CORRECT (hashé)");
         } elseif ($password === $user['password']) {
             $passwordValid = true;
             $isPlainText = true;
-            $debug_message .= " | ✅ Mot de passe CORRECT (en clair)";
+            logDebug("✅ Mot de passe CLIENT CORRECT (en clair)");
         } else {
-            $debug_message .= " | ❌ Mot de passe INCORRECT";
-            $debug_message .= " | Hash BD: " . substr($user['password'], 0, 30) . "...";
+            logDebug("❌ Mot de passe CLIENT INCORRECT");
+            logDebug("Password fourni: '$password'");
+            logDebug("Password BD: " . $user['password']);
         }
         
         if ($passwordValid) {
@@ -222,7 +203,7 @@ try {
                     ':hashedPassword' => $hashedPassword,
                     ':id' => $user['id_client']
                 ]);
-                $debug_message .= " | 🔄 Mot de passe migré vers hash";
+                logDebug("🔄 Mot de passe client migré vers hash sécurisé");
             }
             
             // Session client
@@ -233,10 +214,11 @@ try {
             $_SESSION['client_logged_in'] = true;
             $_SESSION['login_time'] = time();
             
+            logDebug("✅ Session client créée - Redirection vers /clients/index.php");
+            
             echo json_encode([
                 'success' => true,
                 'message' => 'Connexion client réussie',
-                'debug' => $debug_message,
                 'data' => [
                     'user_id' => $user['id_client'],
                     'username' => $user['tel'],
@@ -247,52 +229,45 @@ try {
                 'timestamp' => time()
             ]);
             exit();
-        } else {
-            echo json_encode([
-                'success' => false,
-                'message' => 'Mot de passe incorrect',
-                'debug' => $debug_message,
-                'timestamp' => time()
-            ]);
-            exit();
         }
+    } else {
+        logDebug("ℹ️ Aucun CLIENT trouvé avec tel: '$username'");
     }
     
     // Aucun utilisateur trouvé
-    $debug_message .= " | ❌ AUCUN COMPTE TROUVÉ";
-    
+    logDebug("❌ FINAL: Aucun compte trouvé (ni admin ni client)");
     http_response_code(401);
     echo json_encode([
         'success' => false,
         'message' => 'Identifiants incorrects',
-        'debug' => $debug_message,
         'timestamp' => time()
     ]);
     exit();
     
 } catch(PDOException $e) {
-    $debug_message = "❌ ERREUR PDO: " . $e->getMessage();
-    $debug_message .= " | Fichier: " . $e->getFile();
-    $debug_message .= " | Ligne: " . $e->getLine();
+    logDebug("❌ ERREUR PDO: " . $e->getMessage());
+    logDebug("❌ Fichier: " . $e->getFile());
+    logDebug("❌ Ligne: " . $e->getLine());
+    logDebug("❌ Code: " . $e->getCode());
     
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Erreur de connexion à la base de données',
-        'debug' => $debug_message,
+        'message' => 'Erreur de connexion à la base de données: ' . $e->getMessage(),
         'timestamp' => time()
     ]);
     exit();
 } catch(Exception $e) {
-    $debug_message = "❌ ERREUR GENERALE: " . $e->getMessage();
+    logDebug("❌ ERREUR GENERALE: " . $e->getMessage());
     
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'message' => 'Erreur serveur',
-        'debug' => $debug_message,
         'timestamp' => time()
     ]);
     exit();
 }
+
+logDebug("=== FIN DE LA TENTATIVE ===");
 ?>
