@@ -57,7 +57,7 @@ if (!$data || !isset($data['username']) || !isset($data['password'])) {
 }
 
 $username = trim($data['username']);
-$password = $data['password']; // Ne pas trimmer le mot de passe
+$password = $data['password'];
 
 if (empty($username) || empty($password)) {
     http_response_code(400);
@@ -69,29 +69,72 @@ if (empty($username) || empty($password)) {
     exit();
 }
 
+// DEBUG: Vérifier si config.php existe
+$config_path = __DIR__ . '/../config.php';
+if (!file_exists($config_path)) {
+    echo json_encode([
+        'success' => false,
+        'message' => 'Erreur configuration',
+        'debug' => 'Fichier config.php introuvable à: ' . $config_path,
+        'timestamp' => time()
+    ]);
+    exit();
+}
+
 // Connexion à la base de données
-require_once __DIR__ . '/../config.php';
+try {
+    require_once $config_path;
+    
+    // DEBUG: Vérifier si $bd existe
+    if (!isset($bd)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur configuration BDD',
+            'debug' => 'Variable $bd non définie dans config.php',
+            'timestamp' => time()
+        ]);
+        exit();
+    }
+    
+    // DEBUG: Tester la connexion
+    $bd->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+} catch (Exception $e) {
+    echo json_encode([
+        'success' => false,
+        'message' => 'Erreur chargement configuration',
+        'debug' => 'Erreur config.php: ' . $e->getMessage(),
+        'timestamp' => time()
+    ]);
+    exit();
+}
 
 try {
+    // DEBUG: Message de début
+    $debug_message = "🔍 Recherche pour: '$username'";
+    
     // 1. Vérifier dans la table admin - Num OU admin_name
     $query = "SELECT admin_id, Num, password, admin_name, admin_role 
               FROM admin 
               WHERE Num = :username OR admin_name = :username 
               LIMIT 1";
     
+    $debug_message .= " | Requête admin préparée";
+    
     $stmt = $bd->prepare($query);
     $stmt->execute([':username' => $username]);
     
-    if ($stmt->rowCount() > 0) {
+    $rowCount = $stmt->rowCount();
+    $debug_message .= " | Résultat admin: " . ($rowCount > 0 ? "TROUVÉ" : "NON TROUVÉ");
+    
+    if ($rowCount > 0) {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        // DEBUG: Compte admin trouvé
-        $debug_message = "✅ Compte ADMIN trouvé: " . $user['admin_name'] . " (Num: " . $user['Num'] . ")";
+        $debug_message .= " | Admin: " . $user['admin_name'] . " (Num: " . $user['Num'] . ")";
         
         // Vérifier le mot de passe
         if (password_verify($password, $user['password'])) {
-            // DEBUG: Mot de passe correct
-            $debug_message .= " - ✅ Mot de passe CORRECT";
+            $debug_message .= " | ✅ Mot de passe CORRECT";
             
             // Session admin
             $_SESSION['user_id'] = $user['admin_id'];
@@ -118,8 +161,11 @@ try {
             ]);
             exit();
         } else {
-            // DEBUG: Mot de passe incorrect
-            $debug_message .= " - ❌ Mot de passe INCORRECT";
+            $debug_message .= " | ❌ Mot de passe INCORRECT";
+            
+            // DEBUG supplémentaire
+            $debug_message .= " | Hash BD: " . substr($user['password'], 0, 30) . "...";
+            $debug_message .= " | Longueur: " . strlen($user['password']);
             
             echo json_encode([
                 'success' => false,
@@ -129,9 +175,6 @@ try {
             ]);
             exit();
         }
-    } else {
-        // DEBUG: Aucun admin trouvé
-        $debug_message = "ℹ️ Aucun compte ADMIN trouvé avec: '$username'";
     }
     
     // 2. Vérifier dans la table client - tel OU nom
@@ -140,14 +183,18 @@ try {
               WHERE tel = :username OR nom = :username 
               LIMIT 1";
     
+    $debug_message .= " | Requête client préparée";
+    
     $stmt = $bd->prepare($query);
     $stmt->execute([':username' => $username]);
     
-    if ($stmt->rowCount() > 0) {
+    $rowCount = $stmt->rowCount();
+    $debug_message .= " | Résultat client: " . ($rowCount > 0 ? "TROUVÉ" : "NON TROUVÉ");
+    
+    if ($rowCount > 0) {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        // DEBUG: Compte client trouvé
-        $debug_message = "✅ Compte CLIENT trouvé: " . $user['nom'] . " " . $user['post_nom'] . " (Tel: " . $user['tel'] . ")";
+        $debug_message .= " | Client: " . $user['nom'] . " " . $user['post_nom'] . " (Tel: " . $user['tel'] . ")";
         
         // Vérifier le mot de passe
         $passwordValid = false;
@@ -155,11 +202,14 @@ try {
         
         if (password_verify($password, $user['password'])) {
             $passwordValid = true;
-            $debug_message .= " - ✅ Mot de passe CORRECT (hashé)";
+            $debug_message .= " | ✅ Mot de passe CORRECT (hashé)";
         } elseif ($password === $user['password']) {
             $passwordValid = true;
             $isPlainText = true;
-            $debug_message .= " - ✅ Mot de passe CORRECT (en clair)";
+            $debug_message .= " | ✅ Mot de passe CORRECT (en clair)";
+        } else {
+            $debug_message .= " | ❌ Mot de passe INCORRECT";
+            $debug_message .= " | Hash BD: " . substr($user['password'], 0, 30) . "...";
         }
         
         if ($passwordValid) {
@@ -172,7 +222,7 @@ try {
                     ':hashedPassword' => $hashedPassword,
                     ':id' => $user['id_client']
                 ]);
-                $debug_message .= " - 🔄 Mot de passe migré vers hash sécurisé";
+                $debug_message .= " | 🔄 Mot de passe migré vers hash";
             }
             
             // Session client
@@ -198,12 +248,6 @@ try {
             ]);
             exit();
         } else {
-            // DEBUG: Mot de passe incorrect
-            $debug_message .= " - ❌ Mot de passe INCORRECT";
-            
-            // Ajouter des informations de débogage supplémentaires
-            $debug_message .= " (Hash dans BD: " . substr($user['password'], 0, 20) . "...)";
-            
             echo json_encode([
                 'success' => false,
                 'message' => 'Mot de passe incorrect',
@@ -212,17 +256,10 @@ try {
             ]);
             exit();
         }
-    } else {
-        // DEBUG: Aucun client trouvé
-        if (isset($debug_message)) {
-            $debug_message .= " | ℹ️ Aucun compte CLIENT trouvé avec: '$username'";
-        } else {
-            $debug_message = "ℹ️ Aucun compte CLIENT trouvé avec: '$username'";
-        }
     }
     
     // Aucun utilisateur trouvé
-    $debug_message = "❌ Aucun compte trouvé (ni ADMIN ni CLIENT) avec: '$username'";
+    $debug_message .= " | ❌ AUCUN COMPTE TROUVÉ";
     
     http_response_code(401);
     echo json_encode([
@@ -234,7 +271,9 @@ try {
     exit();
     
 } catch(PDOException $e) {
-    $debug_message = "❌ ERREUR BDD: " . $e->getMessage();
+    $debug_message = "❌ ERREUR PDO: " . $e->getMessage();
+    $debug_message .= " | Fichier: " . $e->getFile();
+    $debug_message .= " | Ligne: " . $e->getLine();
     
     http_response_code(500);
     echo json_encode([
@@ -245,7 +284,7 @@ try {
     ]);
     exit();
 } catch(Exception $e) {
-    $debug_message = "❌ ERREUR SERVEUR: " . $e->getMessage();
+    $debug_message = "❌ ERREUR GENERALE: " . $e->getMessage();
     
     http_response_code(500);
     echo json_encode([
