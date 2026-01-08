@@ -92,7 +92,7 @@
                     <i class="fas fa-bullhorn"></i> Publications
                 </a>
                 <div class="dropdown-divider"></div>
-                <a href="logout.php" class="dropdown-item logout">
+                <a href="/backend/auth/logout.php" class="dropdown-item logout">
                     <i class="fas fa-sign-out-alt"></i> Déconnexion
                 </a>
             </div>
