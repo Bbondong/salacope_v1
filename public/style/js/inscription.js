@@ -1,7 +1,9 @@
-// fichier: ../js/inscription.js - VERSION SIMPLIFIÉE (acheteur seulement)
+// fichier: ../style/js/inscription.js
+// VERSION ACHETEUR — saute l'étape abonnement
 
-document.addEventListener('DOMContentLoaded', function() {
-    // ========== ÉLÉMENTS DOM ==========
+document.addEventListener('DOMContentLoaded', function () {
+
+    /* ===================== ÉLÉMENTS DOM ===================== */
     const steps = document.querySelectorAll('.form-step');
     const progressFill = document.getElementById('progress-fill');
     const accountTypeOptions = document.querySelectorAll('.account-type-option');
@@ -9,265 +11,135 @@ document.addEventListener('DOMContentLoaded', function() {
     const nextStep2Btn = document.getElementById('next-step-2');
     const prevBtns = document.querySelectorAll('.btn-prev');
     const acheteurForm = document.getElementById('acheteur-form');
-    const togglePasswordBtns = document.querySelectorAll('.toggle-password');
+
     const passwordInput = document.getElementById('password');
     const confirmPasswordInput = document.getElementById('confirm_password');
     const passwordRequirements = document.querySelectorAll('.requirement');
+    const togglePasswordBtns = document.querySelectorAll('.toggle-password');
+
     const termsCheckbox = document.getElementById('terms');
     const submitBtn = document.getElementById('submit-form');
-    
-    // ========== VARIABLES GLOBALES ==========
+
+    /* ===================== VARIABLES ===================== */
     let currentStep = 1;
-    let selectedAccountType = 'acheteur'; // Seulement acheteur pour l'instant
+    let selectedAccountType = 'acheteur';
+
     let formData = {
         acheteur: {}
     };
 
-    // ========== INITIALISATION ==========
+    /* ===================== INITIALISATION ===================== */
     function init() {
-        // Désactiver le bouton suivant pour l'étape 1
         nextStep1Btn.disabled = true;
         submitBtn.disabled = true;
-        
-        // Sélectionner automatiquement "acheteur"
+
         selectAccountType('acheteur');
-        
-        // Initialiser la validation du mot de passe
-        validatePassword(passwordInput.value);
-        
-        // Écouter les changements sur les champs de formulaire
+
+        // masquer visuellement l'étape abonnement
+        const step3Indicator = document.querySelector('.step[data-step="3"]');
+        if (step3Indicator) step3Indicator.style.display = 'none';
+
         setupFormListeners();
-        
-        // Ajouter les styles pour les notifications
-        addNotificationStyles();
+        validatePassword('');
     }
 
-    // ========== ÉCOUTEURS D'ÉVÉNEMENTS ==========
-    
-    // Choix du type de compte (désactivé pour vendeur temporairement)
+    /* ===================== TYPE DE COMPTE ===================== */
     accountTypeOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            const type = this.getAttribute('data-type');
+        option.addEventListener('click', function () {
+            const type = this.dataset.type;
             if (type === 'acheteur') {
                 selectAccountType(type);
             } else {
-                showNotification('Inscription vendeur temporairement désactivée', 'info');
+                showNotification('Inscription vendeur bientôt disponible', 'info');
             }
         });
     });
 
-    // Navigation
-    nextStep1Btn.addEventListener('click', goToStep2);
-    nextStep2Btn.addEventListener('click', goToStep2Next);
-    
-    prevBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            goToStep(currentStep - 1);
-        });
-    });
-
-    // Mot de passe
-    passwordInput.addEventListener('input', function() {
-        validatePassword(this.value);
-    });
-
-    // Conditions d'utilisation
-    termsCheckbox.addEventListener('click', function() {
-        submitBtn.disabled = !this.checked;
-    });
-
-    // Soumission du formulaire
-    document.getElementById('inscription-form').addEventListener('submit', submitForm);
-
-    // Afficher/masquer le mot de passe
-    togglePasswordBtns.forEach(btn => {
-        btn.addEventListener('click', togglePasswordVisibility);
-    });
-
-    // ========== FONCTIONS PRINCIPALES ==========
-
-    // Sélection du type de compte
     function selectAccountType(type) {
-        // Retirer la sélection précédente
-        accountTypeOptions.forEach(opt => {
-            opt.classList.remove('selected');
-        });
-        
-        // Ajouter la sélection à l'option cliquée
+        accountTypeOptions.forEach(opt => opt.classList.remove('selected'));
         document.querySelector(`.account-type-option[data-type="${type}"]`).classList.add('selected');
+
         selectedAccountType = type;
-        
-        // Activer le bouton suivant
         nextStep1Btn.disabled = false;
-        
-        // Sauvegarder le type de compte
-        formData.accountType = type;
     }
 
-    // Navigation vers l'étape 2
-    function goToStep2() {
-        if (!selectedAccountType) {
-            showNotification('Veuillez sélectionner un type de compte', 'error');
-            return;
-        }
-        
-        // Afficher le formulaire approprié
-        if (selectedAccountType === 'acheteur') {
-            acheteurForm.classList.add('active');
-        }
-        
-        goToStep(2);
-    }
+    /* ===================== NAVIGATION ===================== */
+    nextStep1Btn.addEventListener('click', () => goToStep(2));
+    nextStep2Btn.addEventListener('click', goFromStep2);
 
-    // Navigation depuis l'étape 2
-    function goToStep2Next() {
+    prevBtns.forEach(btn => {
+        btn.addEventListener('click', () => goToStep(currentStep - 1));
+    });
+
+    function goFromStep2() {
         if (!validateStep2()) {
-            showNotification('Veuillez corriger les erreurs dans le formulaire', 'error');
+            showNotification('Veuillez corriger les erreurs', 'error');
             return;
         }
-        
-        // Sauvegarder les données du formulaire
         saveFormData();
-        
-        // Aller directement à la confirmation
-        goToStep(3);
+        goToStep(4); // 🔥 SAUT DE L'ÉTAPE ABONNEMENT
     }
 
-    // Changer d'étape
     function goToStep(step) {
-        // Validation des étapes
-        if (step < 1 || step > 3) return;
-        
-        // Masquer l'étape actuelle
+        if (step < 1 || step > 4) return;
+
         document.getElementById(`step-${currentStep}`).classList.remove('active');
-        
-        // Afficher la nouvelle étape
         document.getElementById(`step-${step}`).classList.add('active');
-        
-        // Mettre à jour l'indicateur de progression
-        updateProgressIndicator(step);
-        
-        // Mettre à jour l'étape actuelle
+
         currentStep = step;
-        
-        // Gérer l'affichage des boutons
-        updateNavigationButtons(step);
-        
-        // Mettre à jour les sections spécifiques
-        updateStepSections(step);
-        
-        // Faire défiler vers le haut
+        updateProgress(step);
+
+        if (step === 4) updateSummary();
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // Mettre à jour l'indicateur de progression
-    function updateProgressIndicator(step) {
-        document.querySelectorAll('.step').forEach(stepEl => {
-            stepEl.classList.remove('active');
+    function updateProgress(step) {
+        document.querySelectorAll('.step').forEach(s => {
+            const n = parseInt(s.dataset.step);
+            s.classList.toggle('active', n <= step);
         });
-        
-        document.querySelectorAll(`.step`).forEach(stepEl => {
-            if (parseInt(stepEl.getAttribute('data-step')) <= step) {
-                stepEl.classList.add('active');
-            }
-        });
-        
-        // Mettre à jour la barre de progression
-        const progressPercent = (step - 1) * (100 / 2);
-        progressFill.style.width = `${progressPercent}%`;
+
+        const percent = ((step - 1) / 3) * 100;
+        progressFill.style.width = `${percent}%`;
     }
 
-    // Mettre à jour les boutons de navigation
-    function updateNavigationButtons(step) {
-        const prevBtn = document.querySelector('.btn-prev');
-        
-        if (step === 1) {
-            prevBtn.style.visibility = 'hidden';
-        } else {
-            prevBtn.style.visibility = 'visible';
-        }
-    }
-
-    // Mettre à jour les sections spécifiques à chaque étape
-    function updateStepSections(step) {
-        if (step === 3) {
-            updateSummary();
-        }
-    }
-
-    // ========== VALIDATION DU FORMULAIRE ==========
-
-    // Validation de l'étape 2
+    /* ===================== VALIDATION ===================== */
     function validateStep2() {
-        let isValid = true;
-        
-        // Réinitialiser les erreurs
         clearErrors();
-        
-        // Validation selon le type de compte
-        if (selectedAccountType === 'acheteur') {
-            isValid = validateAcheteurForm() && isValid;
-        }
-        
-        // Validation du mot de passe
-        isValid = validatePasswordFields() && isValid;
-        
-        return isValid;
-    }
+        let valid = true;
 
-    // Validation du formulaire acheteur
-    function validateAcheteurForm() {
-        let isValid = true;
-        const fields = ['nom', 'postnom', 'prenom', 'telephone'];
-        
-        fields.forEach(fieldId => {
-            const input = document.getElementById(fieldId);
+        ['nom', 'postnom', 'prenom', 'telephone'].forEach(id => {
+            const input = document.getElementById(id);
             if (!input.value.trim()) {
-                showError(input, 'Ce champ est obligatoire');
-                isValid = false;
-            } else if (fieldId === 'telephone' && !isValidPhone(input.value)) {
-                showError(input, 'Veuillez entrer un numéro de téléphone valide');
-                isValid = false;
+                showError(input, 'Champ obligatoire');
+                valid = false;
             }
         });
-        
-        return isValid;
+
+        if (!validatePasswordFields()) valid = false;
+        return valid;
     }
 
-    // Validation des champs de mot de passe
     function validatePasswordFields() {
-        let isValid = true;
-        const password = passwordInput.value;
-        const confirmPassword = confirmPasswordInput.value;
-        
-        if (!password) {
-            showError(passwordInput, 'Le mot de passe est obligatoire');
-            isValid = false;
-        } else if (password.length < 6) {
-            showError(passwordInput, 'Le mot de passe doit contenir au moins 6 caractères');
-            isValid = false;
+        let valid = true;
+
+        if (passwordInput.value.length < 6) {
+            showError(passwordInput, '6 caractères minimum');
+            valid = false;
         }
-        
-        if (!confirmPassword) {
-            showError(confirmPasswordInput, 'Veuillez confirmer votre mot de passe');
-            isValid = false;
-        } else if (password !== confirmPassword) {
+
+        if (passwordInput.value !== confirmPasswordInput.value) {
             showError(confirmPasswordInput, 'Les mots de passe ne correspondent pas');
-            isValid = false;
+            valid = false;
         }
-        
-        return isValid;
+
+        return valid;
     }
 
-    // Validation du téléphone
-    function isValidPhone(phone) {
-        const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
-        return phoneRegex.test(phone);
-    }
+    /* ===================== MOT DE PASSE ===================== */
+    passwordInput.addEventListener('input', () => validatePassword(passwordInput.value));
 
-    // ========== GESTION DES MOTS DE PASSE ==========
-
-    // Valider la force du mot de passe
     function validatePassword(password) {
         const rules = {
             length: password.length >= 6,
@@ -275,104 +147,37 @@ document.addEventListener('DOMContentLoaded', function() {
             lowercase: /[a-z]/.test(password),
             number: /[0-9]/.test(password)
         };
-        
-        // Mettre à jour les exigences
+
         passwordRequirements.forEach(req => {
-            const rule = req.getAttribute('data-rule');
-            if (rules[rule]) {
-                req.classList.add('valid');
-            } else {
-                req.classList.remove('valid');
-            }
+            req.classList.toggle('valid', rules[req.dataset.rule]);
         });
-        
-        // Mettre à jour la barre de force
-        updatePasswordStrengthBar(rules);
     }
 
-    // Mettre à jour la barre de force du mot de passe
-    function updatePasswordStrengthBar(rules) {
-        const validCount = Object.values(rules).filter(Boolean).length;
-        const strengthBar = document.querySelector('.strength-bar');
-        const strengthText = document.querySelector('.strength-text');
-        
-        let strength = 'faible';
-        let color = '#e53935';
-        let width = '20%';
-        
-        if (validCount >= 3) {
-            strength = 'fort';
-            color = '#4CAF50';
-            width = '100%';
-        } else if (validCount >= 2) {
-            strength = 'moyen';
-            color = '#ff9800';
-            width = '60%';
-        }
-        
-        if (strengthBar) {
-            strengthBar.style.width = width;
-            strengthBar.style.background = color;
-        }
-        
-        if (strengthText) {
-            strengthText.textContent = `Force du mot de passe : ${strength}`;
-            strengthText.style.color = color;
-        }
-    }
+    togglePasswordBtns.forEach(btn => {
+        btn.addEventListener('click', function () {
+            const input = this.parentElement.querySelector('input');
+            input.type = input.type === 'password' ? 'text' : 'password';
+        });
+    });
 
-    // Afficher/masquer le mot de passe
-    function togglePasswordVisibility(e) {
-        const button = e.currentTarget;
-        const input = button.parentElement.querySelector('input');
-        const icon = button.querySelector('i');
-        
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
-        }
-    }
-
-    // ========== SAUVEGARDE DES DONNÉES ==========
-
-    // Sauvegarder les données du formulaire
+    /* ===================== DONNÉES ===================== */
     function saveFormData() {
         formData.acheteur = {
-            nom: document.getElementById('nom').value,
-            postnom: document.getElementById('postnom').value,
-            prenom: document.getElementById('prenom').value,
-            telephone: document.getElementById('telephone').value
+            nom: nom.value,
+            postnom: postnom.value,
+            prenom: prenom.value,
+            telephone: telephone.value
         };
-        
-        // Sauvegarder le mot de passe
         formData.password = passwordInput.value;
     }
 
-    // ========== RÉSUMÉ ET CONFIRMATION ==========
-
-    // Mettre à jour le résumé
+    /* ===================== RÉSUMÉ ===================== */
     function updateSummary() {
-        updateAccountTypeSummary();
-        updateAcheteurSummary();
-    }
+        document.getElementById('summary-account-type').textContent =
+            'Compte Acheteur (Gratuit)';
 
-    // Mettre à jour le type de compte dans le résumé
-    function updateAccountTypeSummary() {
-        const accountTypeElement = document.getElementById('summary-account-type');
-        accountTypeElement.textContent = 'Compte Acheteur (Gratuit)';
-    }
-
-    // Mettre à jour le résumé pour acheteur
-    function updateAcheteurSummary() {
-        document.getElementById('summary-personal-info').style.display = 'block';
-        
-        const personalDetails = document.querySelector('#summary-personal-info .summary-details');
-        personalDetails.innerHTML = `
+        const container = document.querySelector('#summary-personal-info .summary-details');
+        container.innerHTML = `
             <p><strong>Nom :</strong> ${formData.acheteur.nom}</p>
             <p><strong>Post-nom :</strong> ${formData.acheteur.postnom}</p>
             <p><strong>Prénom :</strong> ${formData.acheteur.prenom}</p>
@@ -380,304 +185,76 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
 
-    // ========== SOUMISSION DU FORMULAIRE ==========
+    /* ===================== SOUMISSION ===================== */
+    termsCheckbox.addEventListener('change', () => {
+        submitBtn.disabled = !termsCheckbox.checked;
+    });
 
-    // Soumettre le formulaire
+    document.getElementById('inscription-form').addEventListener('submit', submitForm);
+
     async function submitForm(e) {
         e.preventDefault();
-        
-        if (!termsCheckbox.checked) {
-            showNotification('Veuillez accepter les conditions d\'utilisation', 'error');
-            return;
-        }
-        
-        // Afficher l'indicateur de chargement
-        showLoading(true);
-        
-        try {
-            // Préparer les données à envoyer
-            const registrationData = prepareRegistrationData();
-            
-            // ENVOI RÉEL AU SERVEUR
-            const response = await sendRegistrationData(registrationData);
-            
-            if (response.success) {
-                showNotification('Compte créé avec succès !', 'success');
-                
-                // Rediriger vers la page de connexion après 2 secondes
-                setTimeout(() => {
-                    window.location.href = response.redirect || '../clients/index.php';
-                }, 2000);
-            } else {
-                throw new Error(response.message || 'Erreur lors de la création du compte');
-            }
-            
-        } catch (error) {
-            console.error('Erreur détaillée:', error);
-            showNotification(error.message, 'error');
-            showLoading(false);
-        }
-    }
 
-    // Préparer les données d'inscription
-    function prepareRegistrationData() {
-        return {
-            accountType: 'acheteur',
-            password: passwordInput.value,
-            user: {
-                nom: document.getElementById('nom').value,
-                postnom: document.getElementById('postnom').value,
-                prenom: document.getElementById('prenom').value,
-                telephone: document.getElementById('telephone').value
-            }
-        };
-    }
+        if (!termsCheckbox.checked) return;
 
-    // Envoyer les données d'inscription
-    async function sendRegistrationData(data) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = 'Création...';
+
         try {
-            const baseUrl = window.location.origin;
-            const API_URL = `${baseUrl}/backend/auth/inscription.php`;
-            
-            const response = await fetch(API_URL, {
+            const response = await fetch('/backend/auth/inscription.php', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(data)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    accountType: 'acheteur',
+                    password: formData.password,
+                    user: formData.acheteur
+                })
             });
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Erreur HTTP ${response.status}`);
-            }
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
-                return result;
+                showNotification('Compte créé avec succès', 'success');
+                setTimeout(() => location.href = './double_authen.php', 1500);
             } else {
-                throw new Error(result.message || 'Erreur lors de l\'inscription');
+                throw new Error(result.message);
             }
-            
-        } catch (error) {
-            console.error('Erreur lors de l\'inscription:', error);
-            
-            // Messages d'erreur personnalisés
-            if (error.message.includes('network') || error.message.includes('Network')) {
-                throw new Error('Problème de connexion. Vérifiez votre connexion internet.');
-            } else if (error.message.includes('téléphone est déjà utilisé')) {
-                throw new Error('Ce numéro de téléphone est déjà utilisé.');
-            } else {
-                throw new Error('Impossible de créer le compte. Veuillez réessayer.');
-            }
-        }
-    }
 
-    // ========== UTILITAIRES ==========
-
-    // Afficher une erreur
-    function showError(input, message) {
-        const formGroup = input.closest('.form-group');
-        formGroup.classList.add('error');
-        const errorMsg = formGroup.querySelector('.error-message');
-        if (errorMsg) {
-            errorMsg.textContent = message;
-            errorMsg.style.display = 'block';
-        }
-    }
-
-    // Effacer toutes les erreurs
-    function clearErrors() {
-        document.querySelectorAll('.form-group').forEach(group => {
-            group.classList.remove('error');
-            const errorMsg = group.querySelector('.error-message');
-            if (errorMsg) {
-                errorMsg.textContent = '';
-                errorMsg.style.display = 'none';
-            }
-        });
-    }
-
-    // Afficher une notification
-    function showNotification(message, type = 'info') {
-        // Créer l'élément de notification
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
-        notification.innerHTML = `
-            <div class="notification-content">
-                <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
-                <span>${message}</span>
-            </div>
-            <button class="notification-close">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-        
-        // Ajouter au body
-        document.body.appendChild(notification);
-        
-        // Animer l'entrée
-        setTimeout(() => {
-            notification.classList.add('show');
-        }, 10);
-        
-        // Fermer la notification
-        const closeBtn = notification.querySelector('.notification-close');
-        closeBtn.addEventListener('click', () => {
-            notification.classList.remove('show');
-            setTimeout(() => {
-                notification.remove();
-            }, 300);
-        });
-        
-        // Fermer automatiquement après 5 secondes
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.classList.remove('show');
-                setTimeout(() => {
-                    notification.remove();
-                }, 300);
-            }
-        }, 5000);
-    }
-
-    // Ajouter les styles pour les notifications
-    function addNotificationStyles() {
-        if (document.getElementById('notification-styles')) return;
-        
-        const style = document.createElement('style');
-        style.id = 'notification-styles';
-        style.textContent = `
-            .notification {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: white;
-                border-radius: 8px;
-                padding: 15px 20px;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                min-width: 300px;
-                max-width: 400px;
-                transform: translateX(400px);
-                transition: transform 0.3s ease;
-                z-index: 9999;
-                border-left: 4px solid #4CAF50;
-            }
-            
-            .notification.show {
-                transform: translateX(0);
-            }
-            
-            .notification-error {
-                border-left-color: #e53935;
-            }
-            
-            .notification-success {
-                border-left-color: #4CAF50;
-            }
-            
-            .notification-info {
-                border-left-color: #2196F3;
-            }
-            
-            .notification-content {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                flex: 1;
-            }
-            
-            .notification-content i {
-                font-size: 18px;
-            }
-            
-            .notification-error .notification-content i {
-                color: #e53935;
-            }
-            
-            .notification-success .notification-content i {
-                color: #4CAF50;
-            }
-            
-            .notification-info .notification-content i {
-                color: #2196F3;
-            }
-            
-            .notification-close {
-                background: none;
-                border: none;
-                color: #999;
-                cursor: pointer;
-                font-size: 16px;
-                padding: 5px;
-                margin-left: 10px;
-            }
-            
-            .notification-close:hover {
-                color: #333;
-            }
-            
-            @media (max-width: 768px) {
-                .notification {
-                    left: 20px;
-                    right: 20px;
-                    max-width: none;
-                    min-width: auto;
-                }
-            }
-        `;
-        
-        document.head.appendChild(style);
-    }
-
-    // Afficher/masquer l'indicateur de chargement
-    function showLoading(show) {
-        if (show) {
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création en cours...';
-            submitBtn.disabled = true;
-        } else {
-            submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Finaliser l\'inscription';
+        } catch (err) {
+            showNotification(err.message || 'Erreur serveur', 'error');
             submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Finaliser l\'inscription';
         }
     }
 
-    // Configurer les écouteurs pour les champs de formulaire
+    /* ===================== UTILITAIRES ===================== */
+    function showError(input, msg) {
+        const group = input.closest('.form-group');
+        group.classList.add('error');
+        group.querySelector('.error-message').textContent = msg;
+    }
+
+    function clearErrors() {
+        document.querySelectorAll('.form-group').forEach(g => {
+            g.classList.remove('error');
+            const e = g.querySelector('.error-message');
+            if (e) e.textContent = '';
+        });
+    }
+
     function setupFormListeners() {
-        // Validation en temps réel des champs
-        const formInputs = document.querySelectorAll('#inscription-form input[required], #inscription-form select[required]');
-        formInputs.forEach(input => {
-            input.addEventListener('blur', function() {
-                if (this.value.trim()) {
-                    clearFieldError(this);
-                }
-            });
-            
-            input.addEventListener('input', function() {
-                if (this.value.trim()) {
-                    clearFieldError(this);
-                }
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', () => {
+                const g = input.closest('.form-group');
+                if (g) g.classList.remove('error');
             });
         });
     }
 
-    // Effacer l'erreur d'un champ
-    function clearFieldError(input) {
-        const formGroup = input.closest('.form-group');
-        if (formGroup) {
-            formGroup.classList.remove('error');
-            const errorMsg = formGroup.querySelector('.error-message');
-            if (errorMsg) {
-                errorMsg.textContent = '';
-                errorMsg.style.display = 'none';
-            }
-        }
+    function showNotification(message, type = 'info') {
+        alert(message); // simple (tu peux remettre ta version stylée)
     }
 
-    // ========== INITIALISATION ==========
+    /* ===================== START ===================== */
     init();
 });

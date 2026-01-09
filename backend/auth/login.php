@@ -10,7 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
 /* ==========================
    PROTECTION BRUTE FORCE
 ========================== */
-$MAX_ATTEMPTS = 5;
+$MAX_ATTEMPTS = 20;
 $LOCK_TIME = 900; // 15 minutes
 $ip = $_SERVER['REMOTE_ADDR'];
 
