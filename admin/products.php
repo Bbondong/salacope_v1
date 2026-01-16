@@ -329,7 +329,7 @@ $perPage = 12;
         display: none;
     }
 
-    /* Modal */
+    /* Modal - Version améliorée pour mobile */
     .modal {
         display: none;
         position: fixed;
@@ -340,19 +340,24 @@ $perPage = 12;
         height: 100%;
         background-color: rgba(0,0,0,0.7);
         animation: fadeIn 0.3s;
+        overflow-y: auto;
+        padding: 10px;
+        box-sizing: border-box;
     }
 
     .modal-content {
         background-color: white;
-        margin: 30px auto;
+        margin: 20px auto;
         padding: 0;
         border-radius: 15px;
         width: 95%;
         max-width: 900px;
-        max-height: 90vh;
+        min-height: auto;
+        max-height: 95vh;
         overflow-y: auto;
         box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         animation: slideUp 0.4s;
+        position: relative;
     }
 
     @keyframes slideUp {
@@ -361,7 +366,7 @@ $perPage = 12;
     }
 
     .modal-header {
-        padding: 25px;
+        padding: 20px;
         border-bottom: 1px solid #eee;
         display: flex;
         justify-content: space-between;
@@ -376,6 +381,8 @@ $perPage = 12;
         color: #2c3e50;
         font-size: 1.5rem;
         margin: 0;
+        padding-right: 20px;
+        word-break: break-word;
     }
 
     .close-modal {
@@ -385,6 +392,12 @@ $perPage = 12;
         background: none;
         border: none;
         transition: color 0.3s;
+        flex-shrink: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .close-modal:hover {
@@ -392,10 +405,87 @@ $perPage = 12;
     }
 
     .modal-body {
-        padding: 25px;
+        padding: 20px;
     }
 
-    /* Responsive */
+    /* Styles pour le contenu du modal */
+    .product-images-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .product-image {
+        width: 100%;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: transform 0.3s;
+    }
+
+    .product-image:hover {
+        transform: scale(1.05);
+    }
+
+    .product-details-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 30px;
+        margin-bottom: 20px;
+    }
+
+    .product-features {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+
+    .product-features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+    }
+
+    .seller-info {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        margin-top: 20px;
+    }
+
+    .price-section {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #ddd;
+    }
+
+    .modal-price {
+        color: #e74c3c;
+        font-size: 1.8rem;
+        margin-bottom: 15px;
+        font-weight: bold;
+    }
+
+    .contact-btn {
+        width: 100%;
+        padding: 12px;
+        background: #3498db;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: background 0.3s;
+    }
+
+    .contact-btn:hover {
+        background: #2980b9;
+    }
+
+    /* Responsive amélioré */
     @media (max-width: 768px) {
         .products-grid {
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -413,11 +503,105 @@ $perPage = 12;
         .header h1 {
             font-size: 2rem;
         }
+        
+        /* Modal responsive pour mobile */
+        .modal-content {
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            border-radius: 0;
+            height: 100vh;
+            max-height: 100vh;
+        }
+        
+        .modal {
+            padding: 0;
+        }
+        
+        .modal-header {
+            padding: 15px;
+        }
+        
+        .modal-header h3 {
+            font-size: 1.3rem;
+        }
+        
+        .modal-body {
+            padding: 15px;
+        }
+        
+        .product-details-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        
+        .product-images-grid {
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        }
+        
+        .product-image {
+            height: 100px;
+        }
+        
+        .product-features-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .modal-price {
+            font-size: 1.5rem;
+        }
     }
 
     @media (max-width: 480px) {
         .products-grid {
             grid-template-columns: 1fr;
+        }
+        
+        .filters-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .filter-select, .search-input {
+            font-size: 14px;
+            padding: 10px;
+        }
+        
+        .product-images-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .product-image {
+            height: 90px;
+        }
+        
+        .modal-header h3 {
+            font-size: 1.2rem;
+        }
+        
+        .contact-btn {
+            padding: 15px;
+            font-size: 1.1rem;
+        }
+    }
+
+    @media (max-width: 360px) {
+        .product-images-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .product-image {
+            height: 150px;
+        }
+    }
+
+    /* Pour les très grands écrans */
+    @media (min-width: 1400px) {
+        .container {
+            max-width: 1600px;
+        }
+        
+        .products-grid {
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
         }
     }
 </style>
@@ -471,6 +655,7 @@ $perPage = 12;
         closeButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
             });
         });
 
@@ -478,6 +663,20 @@ $perPage = 12;
         window.addEventListener('click', (e) => {
             if (e.target === modal) {
                 modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+        });
+
+        // Empêcher la fermeture en cliquant à l'intérieur du contenu
+        modal.querySelector('.modal-content').addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Gérer les touches du clavier
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.style.display === 'block') {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
             }
         });
     }
@@ -640,24 +839,35 @@ $perPage = 12;
                 let imagesHtml = '';
                 if (data.images && data.images.length > 0) {
                     imagesHtml = `
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px;">
+                        <div class="product-images-grid">
                             ${data.images.map(img => 
-                                `<img src="../${img.image_path}" alt="Image produit" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;">`
+                                `<img src="../${img.image_path}" alt="Image produit" class="product-image" loading="lazy">`
                             ).join('')}
+                        </div>
+                    `;
+                } else {
+                    imagesHtml = `
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <img src="https://via.placeholder.com/600x400?text=No+Image" 
+                                 alt="Aucune image disponible" 
+                                 style="width: 100%; max-height: 300px; object-fit: cover; border-radius: 10px;">
                         </div>
                     `;
                 }
                 
+                // Formater le prix
+                const price = parseFloat(product.price).toFixed(2).replace('.', ',') + ' €';
+                
                 modalBody.innerHTML = `
                     ${imagesHtml}
-                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+                    <div class="product-details-grid">
                         <div>
                             <h4 style="color: #2c3e50; margin-bottom: 15px;">Description</h4>
-                            <p style="color: #5d6d7e; line-height: 1.6; margin-bottom: 20px;">${product.description}</p>
+                            <p style="color: #5d6d7e; line-height: 1.6; margin-bottom: 20px; white-space: pre-line;">${product.description}</p>
                             
-                            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                            <div class="product-features">
                                 <h5 style="color: #2c3e50; margin-bottom: 10px;">Caractéristiques</h5>
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                                <div class="product-features-grid">
                                     ${product.brand ? `<div><strong>Marque:</strong> ${product.brand}</div>` : ''}
                                     ${product.model ? `<div><strong>Modèle:</strong> ${product.model}</div>` : ''}
                                     <div><strong>État:</strong> ${getConditionText(product.product_condition)}</div>
@@ -667,20 +877,16 @@ $perPage = 12;
                             </div>
                         </div>
                         
-                        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; height: fit-content;">
+                        <div class="seller-info">
                             <h4 style="color: #2c3e50; margin-bottom: 15px;">Informations vendeur</h4>
                             <p style="margin-bottom: 10px;"><strong>Ville:</strong> ${product.city}</p>
                             ${product.address ? `<p style="margin-bottom: 10px;"><strong>Adresse:</strong> ${product.address}</p>` : ''}
                             ${product.delivery_available ? `<p style="margin-bottom: 10px;"><strong>Livraison:</strong> Oui (${product.delivery_cost} €)</p>` : ''}
                             ${product.is_negotiable ? `<p style="margin-bottom: 20px;"><strong>Prix négociable:</strong> Oui</p>` : ''}
                             
-                            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
-                                <h3 style="color: #e74c3c; font-size: 1.8rem; margin-bottom: 15px;">
-                                    ${parseFloat(product.price).toFixed(2).replace('.', ',')} €
-                                </h3>
-                                <button style="width: 100%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: background 0.3s;" 
-                                        onmouseover="this.style.background='#2980b9'" 
-                                        onmouseout="this.style.background='#3498db'">
+                            <div class="price-section">
+                                <div class="modal-price">${price}</div>
+                                <button class="contact-btn" onclick="contactSeller(${product.user_id})">
                                     <i class="fas fa-comment"></i> Contacter le vendeur
                                 </button>
                             </div>
@@ -690,13 +896,61 @@ $perPage = 12;
                 
                 document.getElementById('modalProductTitle').textContent = product.title;
                 modal.style.display = 'block';
+                document.body.style.overflow = 'hidden'; // Empêcher le scroll du body
+                
+                // Ajouter des écouteurs pour les images
+                setupImageZoom();
+                
             } else {
-                alert('Erreur: ' + data.message);
+                showErrorModal('Erreur: ' + data.message);
             }
         } catch (error) {
             console.error('Erreur:', error);
-            alert('Erreur lors du chargement des détails');
+            showErrorModal('Erreur lors du chargement des détails');
         }
+    }
+
+    // Fonction pour contacter le vendeur
+    function contactSeller(userId) {
+        alert(`Fonction de contact pour l'utilisateur ${userId} - À implémenter`);
+        // Ici vous pourriez rediriger vers une page de messagerie ou ouvrir un formulaire
+    }
+
+    // Setup pour le zoom des images
+    function setupImageZoom() {
+        const images = document.querySelectorAll('.product-image');
+        images.forEach(img => {
+            img.addEventListener('click', function() {
+                // Créer une modal pour voir l'image en grand
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.9);
+                    z-index: 2000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    animation: fadeIn 0.3s;
+                `;
+                
+                const imgLarge = document.createElement('img');
+                imgLarge.src = this.src;
+                imgLarge.style.cssText = `
+                    max-width: 90%;
+                    max-height: 90%;
+                    object-fit: contain;
+                    border-radius: 5px;
+                `;
+                
+                modal.appendChild(imgLarge);
+                modal.addEventListener('click', () => modal.remove());
+                document.body.appendChild(modal);
+            });
+        });
     }
 
     // Helper functions
@@ -707,6 +961,27 @@ $perPage = 12;
             case 'refurbished': return 'Reconditionné';
             default: return condition;
         }
+    }
+
+    function showErrorModal(message) {
+        const modal = document.getElementById('productModal');
+        const modalBody = document.getElementById('productDetails');
+        
+        modalBody.innerHTML = `
+            <div style="text-align: center; padding: 40px 20px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e74c3c; margin-bottom: 20px;"></i>
+                <h3 style="color: #2c3e50; margin-bottom: 15px;">Erreur</h3>
+                <p style="color: #7f8c8d; margin-bottom: 25px;">${message}</p>
+                <button onclick="document.getElementById('productModal').style.display='none'; document.body.style.overflow='auto';" 
+                        style="padding: 10px 25px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                    Fermer
+                </button>
+            </div>
+        `;
+        
+        document.getElementById('modalProductTitle').textContent = 'Erreur';
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
     }
 
     function debounce(func, wait) {

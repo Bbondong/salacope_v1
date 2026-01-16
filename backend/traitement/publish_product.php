@@ -4,6 +4,11 @@ require_once __DIR__ . '/../config.php';
 
 header('Content-Type: application/json');
 
+// Activer l'affichage des erreurs pour le débogage
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // Vérifier l'authentification
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type'])) {
     http_response_code(401);
@@ -25,26 +30,28 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Récupérer et nettoyer les données
-function sanitize($data) {
-    return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
-}
-
 $seller_id = $_SESSION['user_id'];
 $seller_type = $_SESSION['user_type']; // 'client' ou 'admin'
-$title = sanitize($_POST['product_name'] ?? '');
+$title = trim($_POST['product_name'] ?? '');
 $category_id = intval($_POST['category_id'] ?? 0);
 $price = floatval($_POST['price'] ?? 0);
-$description = sanitize($_POST['description'] ?? '');
+$description = trim($_POST['description'] ?? '');
 $stock_quantity = intval($_POST['stock_quantity'] ?? 1);
 $product_condition = $_POST['product_condition'] ?? 'new';
-$brand = sanitize($_POST['brand'] ?? '');
-$model = sanitize($_POST['model'] ?? '');
-$city = sanitize($_POST['city'] ?? '');
-$address = sanitize($_POST['address'] ?? '');
+$brand = trim($_POST['brand'] ?? '');
+$model = trim($_POST['model'] ?? '');
+$city = trim($_POST['city'] ?? '');
+$address = trim($_POST['address'] ?? '');
 $is_negotiable = isset($_POST['is_negotiable']) ? 1 : 0;
 $delivery_available = isset($_POST['delivery_available']) ? 1 : 0;
 $delivery_cost = floatval($_POST['delivery_cost'] ?? 0);
 $warranty_months = intval($_POST['warranty_months'] ?? 0);
+
+// Log des données reçues (pour débogage)
+error_log("Publication produit - Données reçues:");
+error_log("seller_id: $seller_id, seller_type: $seller_type");
+error_log("title: $title, category_id: $category_id, price: $price");
+error_log("city: $city, condition: $product_condition");
 
 // Validation
 $errors = [];
@@ -126,24 +133,41 @@ try {
     // Créer un slug unique
     $slug = createSlug($title) . '-' . uniqid();
     
-    // Insérer le produit
-    $stmt = $bd->prepare("
+    // Vérifier la table products
+    error_log("Insertion dans la table products...");
+    
+    // Insérer le produit - VERSION SIMPLIFIÉE POUR DÉBOGAGE
+    $sql = "
         INSERT INTO products (
             seller_id, seller_type, title, slug, description, price,
             category_id, stock_quantity, product_condition, brand, model,
             city, address, is_negotiable, delivery_available, delivery_cost,
             warranty_months, status, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', NOW())
-    ");
+    ";
     
-    $stmt->execute([
+    error_log("SQL: $sql");
+    
+    $stmt = $bd->prepare($sql);
+    
+    // Log des paramètres
+    $params = [
         $seller_id, $seller_type, $title, $slug, $description, $price,
         $category_id, $stock_quantity, $product_condition, $brand, $model,
         $city, $address, $is_negotiable, $delivery_available, $delivery_cost,
         $warranty_months
-    ]);
+    ];
+    
+    error_log("Params: " . print_r($params, true));
+    
+    $result = $stmt->execute($params);
+    
+    if (!$result) {
+        throw new Exception("Échec de l'exécution de la requête INSERT");
+    }
     
     $product_id = $bd->lastInsertId();
+    error_log("Produit inséré avec ID: $product_id");
     
     // Traitement des images
     $uploadDir = '../../uploads/products/' . date('Y/m/');
@@ -174,6 +198,10 @@ try {
                 $i,
                 $isPrimary
             ]);
+            
+            error_log("Image $i insérée: $relativePath");
+        } else {
+            throw new Exception("Échec du téléchargement de l'image $i");
         }
     }
     
@@ -184,7 +212,7 @@ try {
         'success' => true,
         'message' => 'Produit publié avec succès',
         'product_id' => $product_id,
-        'redirect' => '../../product.php?id=' . $product_id
+        'redirect' => '../../products.php?id=' . $product_id
     ]);
     
 } catch (PDOException $e) {
@@ -193,14 +221,20 @@ try {
         $bd->rollBack();
     }
     
-    http_response_code(500);
-    error_log('Erreur publication produit: ' . $e->getMessage());
+    error_log('ERREUR PDO publication produit: ' . $e->getMessage());
+    error_log('Code erreur: ' . $e->getCode());
+    error_log('Fichier: ' . $e->getFile());
+    error_log('Ligne: ' . $e->getLine());
     
+    http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Erreur lors de la publication du produit'
+        'message' => 'Erreur base de données: ' . $e->getMessage(),
+        'error_code' => $e->getCode()
     ]);
 } catch (Exception $e) {
+    error_log('ERREUR GENERALE publication produit: ' . $e->getMessage());
+    
     http_response_code(500);
     echo json_encode([
         'success' => false,

@@ -32,6 +32,10 @@
             <i class="fas fa-cog"></i>
             <span>Paramètres</span>
         </a>
+        <a href="logout.php" class="logout-btn menu-item">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Paramètres</span>
+        </a>
     </div>
     
     <div class="admin-profile">

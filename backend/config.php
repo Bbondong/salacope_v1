@@ -35,7 +35,7 @@ $db_password = $env['DB_PASS'] ?? '';
 $charset = $env['DB_CHARSET'] ?? 'utf8mb4';
 
 // Vérification
-if (empty($host) || empty($dbname) || empty($username)) {
+if (empty($host) || empty($dbname) || empty($db_username)) {
     http_response_code(500);
     header('Content-Type: application/json');
     die(json_encode([

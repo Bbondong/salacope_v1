@@ -2,51 +2,53 @@
 session_start();
 require_once '../backend/config.php';
 
-// Récupérer les statistiques
+// Récupérer les statistiques réelles
 try {
-    // Produits en ligne (seule table que vous avez pour le moment)
+    // 1. Produits en ligne (depuis votre table products)
     $stmtProducts = $bd->prepare("SELECT COUNT(*) as total FROM products WHERE status = 'published'");
     $stmtProducts->execute();
     $productsCount = $stmtProducts->fetch()['total'];
     
-    // Utilisateurs actifs (clients)
+    // 2. Clients actifs (depuis votre table client)
     $stmtClients = $bd->prepare("SELECT COUNT(*) as total FROM client");
     $stmtClients->execute();
     $clientsCount = $stmtClients->fetch()['total'];
     
-    // Admins
-    $stmtAdmins = $bd->prepare("SELECT COUNT(*) as total FROM admin");
-    $stmtAdmins->execute();
-    $adminsCount = $stmtAdmins->fetch()['total'];
-    
-    // Derniers produits publiés
+    // 3. Derniers produits publiés (pour les activités)
     $stmtRecentProducts = $bd->prepare("
         SELECT p.title, p.price, p.created_at, p.city, 
-               c.name as category_name
+               c.name as category_name,
+               CASE 
+                   WHEN p.seller_type = 'client' THEN cl.nom
+                   WHEN p.seller_type = 'admin' THEN a.admin_name
+                   ELSE 'Anonyme'
+               END as seller_name
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.category_id
+        LEFT JOIN client cl ON p.seller_id = cl.id_client AND p.seller_type = 'client'
+        LEFT JOIN admin a ON p.seller_id = a.admin_id AND p.seller_type = 'admin'
         WHERE p.status = 'published'
         ORDER BY p.created_at DESC
-        LIMIT 5
+        LIMIT 3
     ");
     $stmtRecentProducts->execute();
     $recentProducts = $stmtRecentProducts->fetchAll(PDO::FETCH_ASSOC);
     
-    // Derniers clients inscrits
+    // 4. Derniers clients inscrits
     $stmtRecentClients = $bd->prepare("
-        SELECT nom, prenom, tel, created_at 
+        SELECT nom, prenom, created_at 
         FROM client 
         ORDER BY created_at DESC 
-        LIMIT 5
+        LIMIT 3
     ");
     $stmtRecentClients->execute();
     $recentClients = $stmtRecentClients->fetchAll(PDO::FETCH_ASSOC);
     
 } catch (PDOException $e) {
+    // En cas d'erreur
     error_log("Erreur dashboard stats: " . $e->getMessage());
     $productsCount = 0;
     $clientsCount = 0;
-    $adminsCount = 0;
     $recentProducts = [];
     $recentClients = [];
 }
@@ -54,12 +56,13 @@ try {
 
 <div class="stats-container">
     <div class="stat-card">
-        <div class="stat-icon icon-products">
-            <i class="fas fa-boxes"></i>
+        <div class="stat-icon icon-sales">
+            <i class="fas fa-shopping-cart"></i>
         </div>
         <div class="stat-info">
-            <h3><?php echo $productsCount; ?></h3>
-            <p>Produits en ligne</p>
+            <h3>0</h3>
+            <p>Ventes totales</p>
+            <span class="stat-subtitle">À venir</span>
         </div>
     </div>
     
@@ -69,27 +72,30 @@ try {
         </div>
         <div class="stat-info">
             <h3><?php echo $clientsCount; ?></h3>
-            <p>Clients inscrits</p>
+            <p>Utilisateurs actifs</p>
+            <span class="stat-subtitle"><?php echo $clientsCount; ?> client(s)</span>
         </div>
     </div>
     
     <div class="stat-card">
-        <div class="stat-icon icon-admin">
-            <i class="fas fa-user-shield"></i>
+        <div class="stat-icon icon-products">
+            <i class="fas fa-boxes"></i>
         </div>
         <div class="stat-info">
-            <h3><?php echo $adminsCount; ?></h3>
-            <p>Administrateurs</p>
+            <h3><?php echo $productsCount; ?></h3>
+            <p>Produits en ligne</p>
+            <span class="stat-subtitle"><?php echo $productsCount; ?> produit(s)</span>
         </div>
     </div>
     
     <div class="stat-card">
-        <div class="stat-icon icon-categories">
-            <i class="fas fa-tags"></i>
+        <div class="stat-icon icon-subscriptions">
+            <i class="fas fa-id-card"></i>
         </div>
         <div class="stat-info">
-            <h3 id="categories-count">0</h3>
-            <p>Catégories</p>
+            <h3>0</h3>
+            <p>Abonnements actifs</p>
+            <span class="stat-subtitle">À venir</span>
         </div>
     </div>
 </div>
@@ -98,12 +104,12 @@ try {
     <div class="card">
         <div class="card-header">
             <h3>Produits récemment publiés</h3>
-            <a href="?page=produits">Voir tout</a>
+            <a href="?page=products">Voir tout</a>
         </div>
         <div class="card-body">
             <?php if (empty($recentProducts)): ?>
-                <div style="text-align: center; padding: 20px; color: #7f8c8d;">
-                    <i class="fas fa-box-open" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                <div class="empty-state">
+                    <i class="fas fa-box-open"></i>
                     <p>Aucun produit publié</p>
                 </div>
             <?php else: ?>
@@ -111,44 +117,17 @@ try {
                     <?php foreach ($recentProducts as $product): ?>
                         <li class="sale-item">
                             <div class="sale-info">
-                                <h4><?php echo htmlspecialchars(substr($product['title'], 0, 30)); ?><?php echo strlen($product['title']) > 30 ? '...' : ''; ?></h4>
+                                <h4><?php echo htmlspecialchars(substr($product['title'], 0, 25)); ?><?php echo strlen($product['title']) > 25 ? '...' : ''; ?></h4>
                                 <p>
                                     <span class="product-category"><?php echo htmlspecialchars($product['category_name'] ?? 'Non catégorisé'); ?></span>
-                                    <span class="product-location"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($product['city']); ?></span>
+                                    <span class="product-seller">Par <?php echo htmlspecialchars($product['seller_name']); ?></span>
                                 </p>
                             </div>
                             <div class="sale-amount">
                                 <?php echo number_format($product['price'], 2, ',', ' '); ?> €
-                            </div>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            <?php endif; ?>
-        </div>
-    </div>
-    
-    <div class="card">
-        <div class="card-header">
-            <h3>Nouveaux clients</h3>
-            <a href="?page=clients">Voir tout</a>
-        </div>
-        <div class="card-body">
-            <?php if (empty($recentClients)): ?>
-                <div style="text-align: center; padding: 20px; color: #7f8c8d;">
-                    <i class="fas fa-user-plus" style="font-size: 2rem; margin-bottom: 10px;"></i>
-                    <p>Aucun nouveau client</p>
-                </div>
-            <?php else: ?>
-                <ul class="activity-list">
-                    <?php foreach ($recentClients as $client): ?>
-                        <li class="activity-item">
-                            <i class="fas fa-user-plus activity-icon"></i>
-                            <div class="activity-content">
-                                <p><strong><?php echo htmlspecialchars($client['nom'] . ' ' . $client['prenom']); ?></strong></p>
-                                <p>Tél: <?php echo htmlspecialchars($client['tel']); ?></p>
-                                <span class="activity-time">
+                                <div class="sale-time">
                                     <?php 
-                                        $time = strtotime($client['created_at']);
+                                        $time = strtotime($product['created_at']);
                                         $now = time();
                                         $diff = $now - $time;
                                         
@@ -159,10 +138,10 @@ try {
                                         } elseif ($diff < 86400) {
                                             echo 'Il y a ' . floor($diff/3600) . ' h';
                                         } else {
-                                            echo 'Il y a ' . floor($diff/86400) . ' j';
+                                            echo date('d/m/Y H:i', $time);
                                         }
                                     ?>
-                                </span>
+                                </div>
                             </div>
                         </li>
                     <?php endforeach; ?>
@@ -170,9 +149,111 @@ try {
             <?php endif; ?>
         </div>
     </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h3>Activités récentes</h3>
+            <a href="?page=activity">Voir tout</a>
+        </div>
+        <div class="card-body">
+            <?php if (empty($recentClients) && empty($recentProducts)): ?>
+                <div class="empty-state">
+                    <i class="fas fa-bell-slash"></i>
+                    <p>Aucune activité récente</p>
+                </div>
+            <?php else: ?>
+                <ul class="activity-list">
+                    <?php 
+                    // Compter le nombre d'activités
+                    $totalActivities = count($recentClients) + count($recentProducts);
+                    $displayed = 0;
+                    
+                    // Afficher d'abord les nouveaux produits
+                    foreach ($recentProducts as $product):
+                        if ($displayed >= 4) break;
+                        $time = strtotime($product['created_at']);
+                        $now = time();
+                        $diff = $now - $time;
+                        
+                        if ($diff < 60) {
+                            $timeText = 'À l\'instant';
+                        } elseif ($diff < 3600) {
+                            $timeText = 'Il y a ' . floor($diff/60) . ' min';
+                        } elseif ($diff < 86400) {
+                            $timeText = 'Il y a ' . floor($diff/3600) . ' h';
+                        } else {
+                            $timeText = date('d/m/Y H:i', $time);
+                        }
+                    ?>
+                    <li class="activity-item">
+                        <i class="fas fa-box activity-icon"></i>
+                        <div class="activity-content">
+                            <p>Nouveau produit publié: <?php echo htmlspecialchars(substr($product['title'], 0, 20)); ?><?php echo strlen($product['title']) > 20 ? '...' : ''; ?></p>
+                            <span class="activity-time"><?php echo $timeText; ?></span>
+                        </div>
+                    </li>
+                    <?php 
+                        $displayed++;
+                    endforeach; 
+                    
+                    // Afficher ensuite les nouveaux clients
+                    foreach ($recentClients as $client):
+                        if ($displayed >= 4) break;
+                        $time = strtotime($client['created_at']);
+                        $now = time();
+                        $diff = $now - $time;
+                        
+                        if ($diff < 60) {
+                            $timeText = 'À l\'instant';
+                        } elseif ($diff < 3600) {
+                            $timeText = 'Il y a ' . floor($diff/60) . ' min';
+                        } elseif ($diff < 86400) {
+                            $timeText = 'Il y a ' . floor($diff/3600) . ' h';
+                        } else {
+                            $timeText = date('d/m/Y H:i', $time);
+                        }
+                    ?>
+                    <li class="activity-item">
+                        <i class="fas fa-user-plus activity-icon"></i>
+                        <div class="activity-content">
+                            <p>Nouvel utilisateur inscrit: <?php echo htmlspecialchars($client['nom'] . ' ' . $client['prenom']); ?></p>
+                            <span class="activity-time"><?php echo $timeText; ?></span>
+                        </div>
+                    </li>
+                    <?php 
+                        $displayed++;
+                    endforeach;
+                    
+                    // Si pas assez d'activités, ajouter des messages par défaut
+                    if ($displayed < 4):
+                        $defaultActivities = [
+                            ['icon' => 'fas fa-comment', 'text' => 'Nouveau message reçu', 'time' => 'À venir'],
+                            ['icon' => 'fas fa-shopping-cart', 'text' => 'Nouvelle vente réalisée', 'time' => 'À venir']
+                        ];
+                        
+                        foreach ($defaultActivities as $activity):
+                            if ($displayed >= 4) break;
+                    ?>
+                    <li class="activity-item">
+                        <i class="<?php echo $activity['icon']; ?> activity-icon"></i>
+                        <div class="activity-content">
+                            <p><?php echo $activity['text']; ?></p>
+                            <span class="activity-time"><?php echo $activity['time']; ?></span>
+                        </div>
+                    </li>
+                    <?php 
+                            $displayed++;
+                        endforeach;
+                    endif;
+                    ?>
+                </ul>
+            <?php endif; ?>
+        </div>
+    </div>
 </div>
 
 <style>
+/* Stats Container */
 .stats-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -192,7 +273,7 @@ try {
 
 .stat-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
 }
 
 .stat-icon {
@@ -206,10 +287,14 @@ try {
     font-size: 24px;
 }
 
-.icon-products { background: #e3f2fd; color: #1976d2; }
-.icon-users { background: #f3e5f5; color: #7b1fa2; }
-.icon-admin { background: #e8f5e9; color: #388e3c; }
-.icon-categories { background: #fff3e0; color: #f57c00; }
+.icon-sales { background: #ffeaa7; color: #fdcb6e; }
+.icon-users { background: #a29bfe; color: #6c5ce7; }
+.icon-products { background: #81ecec; color: #00cec9; }
+.icon-subscriptions { background: #fab1a0; color: #e17055; }
+
+.stat-info {
+    flex: 1;
+}
 
 .stat-info h3 {
     font-size: 28px;
@@ -219,15 +304,29 @@ try {
 }
 
 .stat-info p {
-    margin: 0;
+    margin: 0 0 5px 0;
     color: #7f8c8d;
-    font-size: 14px;
+    font-size: 15px;
+    font-weight: 500;
 }
 
+.stat-subtitle {
+    font-size: 12px;
+    color: #95a5a6;
+    display: block;
+}
+
+/* Dashboard Cards */
 .dashboard-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 25px;
+}
+
+@media (max-width: 768px) {
+    .dashboard-cards {
+        grid-template-columns: 1fr;
+    }
 }
 
 .card {
@@ -265,6 +364,7 @@ try {
     padding: 20px;
 }
 
+/* Sales List */
 .sales-list, .activity-list {
     list-style: none;
     padding: 0;
@@ -274,7 +374,7 @@ try {
 .sale-item {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     padding: 15px 0;
     border-bottom: 1px solid #f5f5f5;
 }
@@ -287,6 +387,7 @@ try {
     margin: 0 0 5px 0;
     font-size: 15px;
     color: #2c3e50;
+    font-weight: 600;
 }
 
 .sale-info p {
@@ -294,8 +395,8 @@ try {
     font-size: 13px;
     color: #7f8c8d;
     display: flex;
-    gap: 15px;
-    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .product-category {
@@ -306,21 +407,27 @@ try {
     font-size: 11px;
 }
 
-.product-location {
+.product-seller {
     font-size: 12px;
-    color: #7f8c8d;
-}
-
-.product-location i {
-    margin-right: 3px;
+    color: #7b1fa2;
+    font-style: italic;
 }
 
 .sale-amount {
+    text-align: right;
     font-weight: 700;
     color: #e74c3c;
     font-size: 16px;
 }
 
+.sale-time {
+    font-size: 11px;
+    color: #95a5a6;
+    font-weight: normal;
+    margin-top: 5px;
+}
+
+/* Activity List */
 .activity-item {
     display: flex;
     align-items: flex-start;
@@ -342,6 +449,7 @@ try {
     margin-right: 15px;
     background: #f8f9fa;
     color: #3498db;
+    font-size: 16px;
 }
 
 .activity-content {
@@ -359,18 +467,29 @@ try {
     color: #95a5a6;
 }
 
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #95a5a6;
+}
+
+.empty-state i {
+    font-size: 48px;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    margin-bottom: 20px;
+    font-size: 16px;
+}
+
+/* Responsive */
 @media (max-width: 768px) {
     .stats-container {
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(2, 1fr);
         gap: 15px;
-    }
-    
-    .dashboard-cards {
-        grid-template-columns: 1fr;
-    }
-    
-    .card {
-        margin-bottom: 20px;
     }
     
     .stat-card {
@@ -387,25 +506,25 @@ try {
     .stat-info h3 {
         font-size: 24px;
     }
-}
-</style>
-
-<script>
-// Charger le nombre de catégories via AJAX
-document.addEventListener('DOMContentLoaded', function() {
-    loadCategoriesCount();
-});
-
-async function loadCategoriesCount() {
-    try {
-        const response = await fetch('../backend/traitement/get_categories_count.php');
-        const data = await response.json();
-        
-        if (data.success) {
-            document.getElementById('categories-count').textContent = data.count;
-        }
-    } catch (error) {
-        console.error('Erreur chargement catégories:', error);
+    
+    .dashboard-cards {
+        gap: 20px;
     }
 }
-</script>
+
+@media (max-width: 480px) {
+    .stats-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .sale-item {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .sale-amount {
+        text-align: left;
+        width: 100%;
+    }
+}
+</style>
