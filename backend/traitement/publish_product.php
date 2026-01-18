@@ -212,7 +212,7 @@ try {
         'success' => true,
         'message' => 'Produit publié avec succès',
         'product_id' => $product_id,
-        'redirect' => '../../products.php?id=' . $product_id
+        'redirect' => '/products.php?id=' . $product_id
     ]);
     
 } catch (PDOException $e) {

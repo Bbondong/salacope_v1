@@ -34,7 +34,7 @@
         </a>
         <a href="logout.php" class="logout-btn menu-item">
             <i class="fas fa-sign-out-alt"></i>
-            <span>Paramètres</span>
+            <span>Deconnexion</span>
         </a>
     </div>
     
