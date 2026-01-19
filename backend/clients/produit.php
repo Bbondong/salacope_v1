@@ -17,7 +17,7 @@ SELECT
 FROM products p
 JOIN product_images pi 
     ON pi.product_id = p.product_id AND pi.is_primary = 1
-WHERE p.status = 'active'
+WHERE p.status = 'published'
 ";
 
 $params = [];
@@ -39,7 +39,7 @@ try {
 
     // Ajustement du chemin image pour le web
     $products = array_map(function($p) {
-        $p['image_path'] = '/backend/uploads/' . $p['image_path']; 
+        $p['image_path'] = '/' . $p['image_path']; 
         return $p;
     }, $products);
 
