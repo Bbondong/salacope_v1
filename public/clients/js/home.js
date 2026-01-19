@@ -27,8 +27,10 @@ function loadProducts(reset = false) {
         productGrid.innerHTML += `
           <div class="product-card">
             <img src="${p.image_path}" alt="${p.title}">
-            <h4>${p.title}</h4>
-            <p>${p.price} €</p>
+            <div class="product-info">
+              <h4>${p.title}</h4>
+              <p class="price-tag">${p.price} €</p>
+            </div>
           </div>
         `;
       });
