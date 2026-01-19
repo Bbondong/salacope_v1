@@ -1,12 +1,12 @@
 <?php
 header('Content-Type: application/json');
-require_once '../config.php'; // inclusion du config.php
+require_once '../config.php';
 
 $categoryId = $_GET['category'] ?? null;
 $offset     = (int) ($_GET['offset'] ?? 0);
 $limit      = 5;
 
-// Requête SQL
+// Requête SQL pour récupérer les produits avec leur image principale
 $sql = "
 SELECT 
     p.product_id,
@@ -37,9 +37,9 @@ try {
     $stmt->execute($params);
     $products = $stmt->fetchAll();
 
-    // Ajustement chemin image pour le web
+    // Ajustement du chemin image pour le web
     $products = array_map(function($p) {
-        $p['image_path'] = '/backend/uploads/' . $p['image_path']; // adapter selon ton dossier images
+        $p['image_path'] = '/backend/uploads/' . $p['image_path']; 
         return $p;
     }, $products);
 

@@ -2,7 +2,7 @@
 
   <!-- SEARCH -->
   <div class="search-bar">
-    <input type="text" placeholder="Search for products">
+    <input type="text" id="searchInput" placeholder="Search for products">
     <button class="filter-btn">⚙</button>
   </div>
 
@@ -22,7 +22,7 @@
       <span>See All</span>
     </div>
     <div class="category-list" id="categoryList">
-      <!-- catégories injectées -->
+      <!-- catégories injectées via JS -->
     </div>
   </div>
 
@@ -33,3 +33,4 @@
   </div>
 
 </div>
+

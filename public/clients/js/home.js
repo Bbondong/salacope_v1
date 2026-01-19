@@ -1,35 +1,39 @@
 let offset = 0;
 let loading = false;
-let category = null; // changer si tu veux filtrer par catégorie
+let category = null; 
 
-function loadProducts() {
+const productGrid = document.getElementById('productGrid');
+const categoryList = document.getElementById('categoryList');
+
+// Fonction pour charger les produits
+function loadProducts(reset = false) {
   if (loading) return;
   loading = true;
 
+  if (reset) {
+    productGrid.innerHTML = '';
+    offset = 0;
+  }
+
   fetch(`backend/clients/produit.php?offset=${offset}&category=${category ?? ''}`)
-    .then(response => {
-      if (!response.ok) throw new Error("Erreur lors du chargement des produits");
-      return response.json();
-    })
+    .then(res => res.json())
     .then(data => {
       if (!data || data.length === 0) {
         loading = false;
-        return; // plus de produits
+        return;
       }
 
-      const grid = document.getElementById('productGrid');
       data.forEach(p => {
-        const imagePath = p.image_path.startsWith('http') ? p.image_path : p.image_path;
-        grid.innerHTML += `
+        productGrid.innerHTML += `
           <div class="product-card">
-            <img src="${imagePath}" alt="${p.title}">
+            <img src="${p.image_path}" alt="${p.title}">
             <h4>${p.title}</h4>
             <p>${p.price} €</p>
           </div>
         `;
       });
 
-      offset += data.length; // incrément offset
+      offset += data.length;
       loading = false;
     })
     .catch(err => {
@@ -45,5 +49,24 @@ window.addEventListener('scroll', () => {
   }
 });
 
-// Chargement initial
+// Charger catégories
+function loadCategories() {
+  fetch('backend/clients/categories.php')
+    .then(res => res.json())
+    .then(categories => {
+      categoryList.innerHTML = '';
+      categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.textContent = cat.name;
+        btn.addEventListener('click', () => {
+          category = cat.id;
+          loadProducts(true); // reset pour la catégorie
+        });
+        categoryList.appendChild(btn);
+      });
+    });
+}
+
+// Initialisation
+loadCategories();
 loadProducts();
