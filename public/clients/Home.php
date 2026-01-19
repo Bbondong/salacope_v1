@@ -3,23 +3,22 @@
   <!-- SEARCH -->
   <div class="search-bar">
     <input type="text" id="searchInput" placeholder="Search for products">
-    <button class="filter-btn">⚙</button>
+    <button class="filter-btn"><i class="fas fa-sliders-h"></i></button>
   </div>
 
   <!-- BANNER -->
   <div class="promo-banner">
     <div class="promo-text">
-      <h2>Get your special sale upto <span>70%</span></h2>
-      <button>Shop Now</button>
+      <h2>Get your special sale up to <span>70%</span> off!</h2>
+      <button class="shop-now-btn">Shop Now</button>
     </div>
-    <img src="assets/img/model.png">
   </div>
 
   <!-- CATEGORIES -->
   <div class="categories">
     <div class="header">
-      <h3>Category</h3>
-      <span>See All</span>
+      <h3>Categories</h3>
+      <span class="see-all">See All</span>
     </div>
     <div class="category-list" id="categoryList">
       <!-- catégories injectées via JS -->
@@ -33,4 +32,3 @@
   </div>
 
 </div>
-
