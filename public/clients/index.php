@@ -33,6 +33,7 @@ $pageTitle = isset($pageTitles[$page]) ? $pageTitles[$page] : 'Page acceuil';
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./style/navbar-style.css">
     <link rel="stylesheet" href="./style/profil.css">
+    <link rel="stylesheet" href="./style/home.css">
     <link rel="stylesheet" href="./style/chat.css">
     <title>Salacopp client - <?php echo $pageTitle; ?> </title>
 </head>
@@ -41,5 +42,6 @@ $pageTitle = isset($pageTitles[$page]) ? $pageTitles[$page] : 'Page acceuil';
     <?php include loadPage($page); ?>
     <!-- Navbar format mobile -->
     <?php include 'includes/navbar.php'; ?>
+    <script src="./js/home.js"></script>
 </body>
 </html>

@@ -1,0 +1,46 @@
+.home { padding:16px; font-family:sans-serif; }
+
+.search-bar {
+  display:flex;
+  gap:8px;
+}
+.search-bar input {
+  flex:1;
+  padding:12px;
+  border-radius:20px;
+  border:none;
+  background:#f1f1f1;
+}
+
+.promo-banner {
+  background:#111;
+  color:#fff;
+  border-radius:20px;
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  margin:16px 0;
+}
+
+.category-list {
+  display:flex;
+  gap:12px;
+  overflow-x:auto;
+}
+
+.product-grid {
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+}
+
+.product-card {
+  background:#fff;
+  border-radius:16px;
+  padding:8px;
+}
+
+.product-card img {
+  width:100%;
+  border-radius:12px;
+}
