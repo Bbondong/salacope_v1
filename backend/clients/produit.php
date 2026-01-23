@@ -2,6 +2,10 @@
 header('Content-Type: application/json');
 require_once '../config.php';
 
+// Base URL (http / https + domaine)
+$baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+         . '://' . $_SERVER['HTTP_HOST'];
+
 $categoryId = $_GET['category'] ?? null;
 $offset     = (int) ($_GET['offset'] ?? 0);
 $limit      = 5;
@@ -16,7 +20,8 @@ SELECT
     pi.image_path
 FROM products p
 JOIN product_images pi 
-    ON pi.product_id = p.product_id AND pi.is_primary = 1
+    ON pi.product_id = p.product_id 
+   AND pi.is_primary = 1
 WHERE p.status = 'published'
 ";
 
@@ -35,11 +40,11 @@ LIMIT $limit OFFSET $offset
 try {
     $stmt = $bd->prepare($sql);
     $stmt->execute($params);
-    $products = $stmt->fetchAll();
+    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Ajustement du chemin image pour le web
-    $products = array_map(function($p) {
-        $p['image_path'] = '/' . $p['image_path']; 
+    // Génération d'un chemin image ABSOLU depuis la racine du site
+    $products = array_map(function ($p) use ($baseUrl) {
+        $p['image_path'] = $baseUrl . '/' . ltrim($p['image_path'], '/');
         return $p;
     }, $products);
 
@@ -48,10 +53,9 @@ try {
 } catch (PDOException $e) {
     http_response_code(500);
     echo json_encode([
-        'success' => false,
-        'message' => 'Erreur lors de la récupération des produits',
-        'error'   => $e->getMessage(),
+        'success'   => false,
+        'message'   => 'Erreur lors de la récupération des produits',
+        'error'     => $e->getMessage(),
         'timestamp' => time()
     ]);
 }
-?>

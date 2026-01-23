@@ -1,6 +1,7 @@
 # Ne pas importe ce fichier 
 .env
 .git
+public/webhook.php
 test.php
 data.lo1
 data.loo

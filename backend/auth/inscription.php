@@ -43,7 +43,7 @@ if (!isset($bd) || !($bd instanceof PDO)) {
 }
 
 // Chemin vers whatsapp_functions.php
-$whatsappFunctionsFile = __DIR__ . '/../include/whatsapp_functions.php';
+$whatsappFunctionsFile = __DIR__ . '/../sendsms/sendwhatsapp.php';
 if (!file_exists($whatsappFunctionsFile)) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Fonctions WhatsApp manquantes']);
