@@ -1,14 +1,28 @@
 <?php
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate');
+
 require_once '../config.php';
 
-$id = $_GET['id'] ?? null;
-if (!$id) {
-  http_response_code(400);
-  echo json_encode(['error' => 'ID manquant']);
+/* ========= MÉTHODE ========= */
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+  http_response_code(405);
+  echo json_encode(['error' => 'Méthode non autorisée']);
   exit;
 }
 
+/* ========= VALIDATION ID ========= */
+$id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, [
+  'options' => ['min_range' => 1]
+]);
+
+if (!$id) {
+  http_response_code(400);
+  echo json_encode(['error' => 'ID invalide']);
+  exit;
+}
+
+/* ========= REQUÊTE ========= */
 $sql = "
 SELECT
   p.product_id,
@@ -21,9 +35,9 @@ SELECT
   p.brand,
   p.delivery_available,
   p.delivery_cost,
-  pi.image_path
+  COALESCE(pi.image_path, 'assets/no-image.png') AS image_path
 FROM products p
-JOIN product_images pi
+LEFT JOIN product_images pi
   ON pi.product_id = p.product_id
  AND pi.is_primary = 1
 WHERE p.product_id = ?
@@ -41,9 +55,19 @@ if (!$product) {
   exit;
 }
 
-$baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+/* ========= NORMALISATION ========= */
+$product['product_id'] = (int) $product['product_id'];
+$product['seller_id'] = (int) $product['seller_id'];
+$product['price'] = (float) $product['price'];
+$product['stock_quantity'] = (int) $product['stock_quantity'];
+$product['delivery_available'] = (int) $product['delivery_available'];
+$product['delivery_cost'] = (float) $product['delivery_cost'];
+
+/* ========= URL IMAGE ABSOLUE ========= */
+$baseUrl = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
          . '://' . $_SERVER['HTTP_HOST'];
 
 $product['image_path'] = $baseUrl . '/' . ltrim($product['image_path'], '/');
 
-echo json_encode($product);
+/* ========= SORTIE ========= */
+echo json_encode($product, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
