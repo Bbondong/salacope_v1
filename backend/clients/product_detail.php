@@ -3,7 +3,6 @@ header('Content-Type: application/json');
 require_once '../config.php';
 
 $id = $_GET['id'] ?? null;
-
 if (!$id) {
   http_response_code(400);
   echo json_encode(['error' => 'ID manquant']);
@@ -11,14 +10,20 @@ if (!$id) {
 }
 
 $sql = "
-SELECT 
+SELECT
   p.product_id,
+  p.seller_id,
   p.title,
-  p.price,
   p.description,
+  p.price,
+  p.stock_quantity,
+  p.product_condition,
+  p.brand,
+  p.delivery_available,
+  p.delivery_cost,
   pi.image_path
 FROM products p
-JOIN product_images pi 
+JOIN product_images pi
   ON pi.product_id = p.product_id
  AND pi.is_primary = 1
 WHERE p.product_id = ?

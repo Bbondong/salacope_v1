@@ -83,3 +83,51 @@
     }
   }
   
+  .actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.btn-buy {
+  flex: 1;
+  padding: 14px;
+  background: #2e7d32;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.btn-buy:hover {
+  background: #256428;
+}
+
+.btn-contact {
+  flex: 1;
+  padding: 14px;
+  background: #fff;
+  color: #2e7d32;
+  border: 2px solid #2e7d32;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.meta {
+  font-size: 14px;
+  color: #666;
+  display: flex;
+  gap: 15px;
+}
+
+.stock {
+  font-size: 14px;
+  color: #444;
+}
+
+.delivery {
+  font-size: 14px;
+  color: #444;
+}
