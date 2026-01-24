@@ -66,7 +66,7 @@ productGrid.addEventListener('click', (e) => {
   const productId = card.dataset.id;
   if (!productId) return;
 
-  window.location.href = `/clients/product.html?id=${productId}`;
+  window.location.href = `/clients/product.php?id=${productId}`;
 });
 
 /* ============================

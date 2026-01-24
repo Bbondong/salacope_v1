@@ -44,7 +44,7 @@ document.getElementById('buyBtn').addEventListener('click', () => {
     image: currentProduct.image_path
   }));
 
-  window.location.href = '/cart.html';
+  window.location.href = 'clients/cart.php';
 });
 
 /* ========= CONTACTER LE VENDEUR ========= */
@@ -52,5 +52,5 @@ document.getElementById('contactBtn').addEventListener('click', () => {
   if (!currentProduct) return;
 
   window.location.href =
-    `/contact-vendeur.html?seller=${currentProduct.seller_id}&product=${currentProduct.product_id}`;
+    `clients/chat.php?seller=${currentProduct.seller_id}&product=${currentProduct.product_id}`;
 });
