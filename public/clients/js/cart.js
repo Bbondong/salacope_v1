@@ -41,5 +41,5 @@ function changeQty(delta) {
 }
 
 function goCheckout() {
-  window.location.href = '/checkout.php';
+  window.location.href = '/clients/checkout.php';
 }
