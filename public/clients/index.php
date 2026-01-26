@@ -19,7 +19,7 @@ $pageTitles = [
     'Category' => 'Produits',
     'Favory' => 'Favory',
     'Chat' => 'Messagerie',
-    'profil' => 'Profil',
+    'profil' => 'profil',
 ];
 
 $pageTitle = isset($pageTitles[$page]) ? $pageTitles[$page] : 'Page accueil';
@@ -30,7 +30,7 @@ $pageStyles = [
     'Category' => 'category.css',
     'Favory' => 'favory.css',
     'Chat' => 'chat.css',
-    'Profil' => 'profil.css',
+    'profil' => 'profil.css',
 ];
 
 $cssFile = isset($pageStyles[$page]) ? $pageStyles[$page] : 'home.css';
