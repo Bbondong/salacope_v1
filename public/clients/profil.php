@@ -1,11 +1,26 @@
 <?php
+$admin = $_SESSION['user'];
+$name = $_SESSION['name'];
+$tel = $_SESSION['username'];
+$id_client = $_SESSION['user_id'] ;
+$date_creation = $admin['created_at'];
+
+// requette pour savoir nombre commande
+$stmt = $bd->prepare("
+    SELECT COUNT(*) AS nbr_commande
+    FROM info_clients
+    WHERE id_client = :u
+");
+$stmt->execute([':u' => $id_client]);
+
+$nbr_commande = $stmt->fetch(PDO::FETCH_ASSOC)['nbr_commande'];
+
 // Simuler les données utilisateur
 $userData = [
-    'name' => 'Alexandre Martin',
-    'email' => 'alex.martin@email.com',
-    'phone' => '+33 6 12 34 56 78',
-    'member_since' => '2023-03-15',
-    'total_orders' => 24,
+    'name' => $name,
+    'phone' => $tel,
+    'member_since' => $date_creation,
+    'total_orders' => $nbr_commande,
     'total_spent' => '1 845,50€'
 ];
 ?>

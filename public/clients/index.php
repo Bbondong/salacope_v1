@@ -1,8 +1,11 @@
 <?php
+// session :
+session_start();
+
 $page = isset($_GET['page']) ? $_GET['page'] : 'Home';
 
 function loadPage($page) {
-    $validPages = ['Home', 'Category', 'Favory', 'Chat', 'Profil'];
+    $validPages = ['Home', 'Category', 'Favory', 'Chat', 'profil'];
     if (in_array($page, $validPages)) {
         return $page . '.php';
     } else {
@@ -16,7 +19,7 @@ $pageTitles = [
     'Category' => 'Produits',
     'Favory' => 'Favory',
     'Chat' => 'Messagerie',
-    'Profil' => 'Profil',
+    'profil' => 'Profil',
 ];
 
 $pageTitle = isset($pageTitles[$page]) ? $pageTitles[$page] : 'Page accueil';

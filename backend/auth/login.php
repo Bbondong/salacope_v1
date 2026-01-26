@@ -153,16 +153,26 @@ try {
             $_SESSION['username'] = $user['tel'];
             $_SESSION['name'] = $user['nom'] . ' ' . $user['post_nom'];
             $_SESSION['user_type'] = $user['type_client'];
+            $_SESSION['user'] = $user ;
             $_SESSION['client_logged_in'] = true;
             $_SESSION['login_time'] = time();
-
-            echo json_encode([
-                'success' => true,
-                'message' => 'Connexion client réussie',
-                'redirect' => '/clients/index.php',
-                'timestamp' => time()
-            ]);
-            exit();
+            if($user['type_client'] =="client"){
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Connexion client réussie',
+                    'redirect' => '/clients/index.php',
+                    'timestamp' => time()
+                ]);
+                exit();
+            }else{
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Connexion vendeur réussie',
+                    'redirect' => '/vendeur/index.php',
+                    'timestamp' => time()
+                ]);
+                exit();
+            }
         }
     }
 
