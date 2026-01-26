@@ -10,7 +10,7 @@ if (
     !isset($_SESSION['user']) ||
     !isset($_SESSION['username'])
 ) {
-    header('Location: login.php');
+    header('Location: ../');
     exit;
 }
 
@@ -34,7 +34,7 @@ function loadPage(string $page): string
         'Category' => 'Category.php',
         'Favory'   => 'Favory.php',
         'Chat'     => 'Chat.php',
-        'profil'   => 'profil.php'
+        'Profil'   => 'profil.php'
     ];
 
     return $validPages[$page] ?? 'Home.php';
@@ -57,7 +57,7 @@ $pageStyles = [
     'Category' => 'category.css',
     'Favory'   => 'favory.css',
     'Chat'     => 'chat.css',
-    'profil'   => 'profil.css',
+    'Profil'   => 'Profil.css',
 ];
 
 $cssFile = $pageStyles[$page] ?? 'home.css';

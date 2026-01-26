@@ -29,7 +29,7 @@
         </li>
 
         <li>
-            <a href="?page=profil" class="nav-item <?= $page=='profil'?'active':'' ?>">
+            <a href="?page=Profil" class="nav-item <?= $page=='Profil'?'active':'' ?>">
                 <i class="fas fa-user"></i>
                 <span>Profil</span>
             </a>
