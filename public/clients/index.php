@@ -46,7 +46,7 @@ $pageTitles = [
     'Category' => 'Produits',
     'Favory'   => 'Favoris',
     'Chat'     => 'Messagerie',
-    'profil'   => 'Profil',
+    'Profil'   => 'Profil',
 ];
 
 $pageTitle = $pageTitles[$page] ?? 'Page accueil';
