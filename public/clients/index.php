@@ -2,6 +2,7 @@
 /* =========================
    SESSION & SÉCURITÉ
 ========================= */
+require_once __DIR__ . '/backend/config.php';
 session_start();
 
 /* Bloquer tout accès sans authentification */
@@ -34,7 +35,7 @@ function loadPage(string $page): string
         'Category' => 'Category.php',
         'Favory'   => 'Favory.php',
         'Chat'     => 'Chat.php',
-        'Profil'   => 'Profil.php'
+        'Profil'   => 'profil.php'
     ];
 
     return $validPages[$page] ?? 'Home.php';
@@ -63,6 +64,7 @@ $pageStyles = [
 /* js par page */
 $pagejs = [
     'Home'     => 'home.js',
+    'Chat' => 'chat.js',
 ];
 
 $jspage = $pagejs[$page];
