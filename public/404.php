@@ -1,5 +1,5 @@
 <?php
-// Important pour le SEO et les navigateurs
+// Important pour le SEO et les navigateurs e
 http_response_code(404);
 ?>
 <!DOCTYPE html>
