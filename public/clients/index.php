@@ -2,7 +2,7 @@
 /* =========================
    SESSION & SÉCURITÉ
 ========================= */
-require_once __DIR__ . '/backend/config.php';
+require_once __DIR__ . '/../backend/config.php';
 session_start();
 
 /* Bloquer tout accès sans authentification */

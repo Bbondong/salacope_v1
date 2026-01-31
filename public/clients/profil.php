@@ -462,8 +462,7 @@ function addAddress() {
 // Déconnexion
 function logout() {
     if (confirm('Se déconnecter ?')) {
-        // Redirection vers login
-        window.location.href = '?page=logout';
+        window.location.href = '../backend/auth/logout.php';
     }
 }
 
