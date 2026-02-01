@@ -459,11 +459,26 @@ function addAddress() {
     }
 }
 
-// Déconnexion
+// Déconnexion (Solution 2 : API + redirection JS)
 function logout() {
-    if (confirm('Se déconnecter ?')) {
-        window.location.href = '../backend/auth/logout.php';
-    }
+    if (!confirm('Se déconnecter ?')) return;
+
+    fetch('/backend/auth/logout.php', {
+        method: 'POST',
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = '/';
+        } else {
+            alert('Erreur lors de la déconnexion');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur logout:', error);
+        alert('Impossible de se déconnecter');
+    });
 }
 
 // Initialisation responsive
