@@ -1,7 +1,11 @@
 // fichier: ../style/js/inscription.js
-// VERSION COMPLÈTE — avec acheteur, vendeur et ouverture WhatsApp automatique
+// VERSION MODULAIRE — fonctions séparées pour client et vendeur
 
 document.addEventListener('DOMContentLoaded', function () {
+    // DÉBOGAGE INITIAL
+    console.log('✅ Script inscription.js chargé');
+    console.log('📍 URL actuelle:', window.location.href);
+    console.log('📍 Chemin actuel:', window.location.pathname);
 
     /* ===================== ÉLÉMENTS DOM ===================== */
     const steps = document.querySelectorAll('.form-step');
@@ -34,14 +38,6 @@ document.addEventListener('DOMContentLoaded', function () {
     let selectedDuration = '1';
     let selectedPaymentMethod = 'mobile_money';
 
-    let formData = {
-        acheteur: {},
-        vendeur: {
-            entreprise: {},
-            proprietaire: {}
-        }
-    };
-
     /* ===================== INITIALISATION ===================== */
     function init() {
         nextStep1Btn.disabled = true;
@@ -56,6 +52,81 @@ document.addEventListener('DOMContentLoaded', function () {
         setupPaymentListeners();
         setupFormListeners();
         validatePassword('');
+
+        // Désactiver la validation HTML5
+        document.getElementById('inscription-form').setAttribute('novalidate', 'novalidate');
+        
+        // Masquer les champs vendeur par défaut
+        hideVendeurFields();
+    }
+
+    /* ===================== FONCTIONS UTILITAIRES ===================== */
+    function hideVendeurFields() {
+        // Désactiver tous les champs vendeur
+        const vendeurFields = vendeurForm.querySelectorAll('input, select, textarea');
+        vendeurFields.forEach(field => {
+            field.disabled = true;
+            field.removeAttribute('required');
+            field.style.display = 'none';
+        });
+        
+        // Masquer les labels aussi
+        const vendeurLabels = vendeurForm.querySelectorAll('label');
+        vendeurLabels.forEach(label => {
+            label.style.display = 'none';
+        });
+    }
+
+    function showVendeurFields() {
+        // Activer tous les champs vendeur
+        const vendeurFields = vendeurForm.querySelectorAll('input, select, textarea');
+        vendeurFields.forEach(field => {
+            field.disabled = false;
+            if (field.hasAttribute('data-required')) {
+                field.setAttribute('required', 'required');
+            }
+            field.style.display = '';
+        });
+        
+        // Afficher les labels
+        const vendeurLabels = vendeurForm.querySelectorAll('label');
+        vendeurLabels.forEach(label => {
+            label.style.display = '';
+        });
+    }
+
+    function hideAcheteurFields() {
+        // Désactiver tous les champs acheteur
+        const acheteurFields = acheteurForm.querySelectorAll('input, select, textarea');
+        acheteurFields.forEach(field => {
+            field.disabled = true;
+            field.removeAttribute('required');
+            field.style.display = 'none';
+        });
+        
+        // Masquer les labels
+        const acheteurLabels = acheteurForm.querySelectorAll('label');
+        acheteurLabels.forEach(label => {
+            label.style.display = 'none';
+        });
+    }
+
+    function showAcheteurFields() {
+        // Activer tous les champs acheteur
+        const acheteurFields = acheteurForm.querySelectorAll('input, select, textarea');
+        acheteurFields.forEach(field => {
+            field.disabled = false;
+            if (field.hasAttribute('data-required')) {
+                field.setAttribute('required', 'required');
+            }
+            field.style.display = '';
+        });
+        
+        // Afficher les labels
+        const acheteurLabels = acheteurForm.querySelectorAll('label');
+        acheteurLabels.forEach(label => {
+            label.style.display = '';
+        });
     }
 
     /* ===================== TYPE DE COMPTE ===================== */
@@ -73,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedAccountType = type;
         nextStep1Btn.disabled = false;
 
-        // Afficher le formulaire correspondant
+        // Afficher/masquer les formulaires appropriés
         showAccountForm(type);
 
         // Gérer l'affichage de l'étape abonnement
@@ -81,38 +152,47 @@ document.addEventListener('DOMContentLoaded', function () {
         if (step3Indicator) {
             step3Indicator.style.display = type === 'vendeur' ? 'flex' : 'none';
         }
+
+        // Gérer les champs selon le type
+        if (type === 'acheteur') {
+            showAcheteurFields();
+            hideVendeurFields();
+        } else {
+            showVendeurFields();
+            hideAcheteurFields();
+        }
     }
 
     function showAccountForm(type) {
         if (type === 'acheteur') {
-            acheteurForm.classList.add('active');
-            vendeurForm.classList.remove('active');
+            acheteurForm.style.display = 'block';
+            vendeurForm.style.display = 'none';
         } else {
-            acheteurForm.classList.remove('active');
-            vendeurForm.classList.add('active');
+            acheteurForm.style.display = 'none';
+            vendeurForm.style.display = 'block';
         }
     }
 
     /* ===================== NAVIGATION ===================== */
     nextStep1Btn.addEventListener('click', () => {
         goToStep(2);
-        // Si vendeur, on réinitialise la sélection d'abonnement
         if (selectedAccountType === 'vendeur') {
             resetSubscriptionSelection();
         }
     });
 
     nextStep2Btn.addEventListener('click', () => {
-        if (!validateStep2()) {
-            showNotification('Veuillez corriger les erreurs dans le formulaire', 'error');
-            return;
-        }
-        saveFormData();
-        
-        // Si acheteur, on saute à l'étape de confirmation
         if (selectedAccountType === 'acheteur') {
+            if (!validateAcheteurStep2()) {
+                showNotification('Veuillez corriger les erreurs dans le formulaire', 'error');
+                return;
+            }
             goToStep(4);
         } else {
+            if (!validateVendeurStep2()) {
+                showNotification('Veuillez corriger les erreurs dans le formulaire', 'error');
+                return;
+            }
             goToStep(3);
         }
     });
@@ -132,7 +212,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function goToStep(step) {
         if (step < 1 || step > 4) return;
 
-        // Si vendeur va à l'étape 4 sans plan, on le redirige à l'étape 3
         if (step === 4 && selectedAccountType === 'vendeur' && !selectedPlan) {
             showNotification('Veuillez d\'abord sélectionner un plan d\'abonnement', 'error');
             goToStep(3);
@@ -155,80 +234,91 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateProgress(step) {
         document.querySelectorAll('.step').forEach(s => {
             const n = parseInt(s.dataset.step);
-            // Pour les acheteurs, on ignore l'étape 3 dans la progression
             if (selectedAccountType === 'acheteur' && n === 3) return;
             s.classList.toggle('active', n <= step);
         });
 
-        // Calcul du pourcentage de progression
         let totalSteps = selectedAccountType === 'acheteur' ? 3 : 4;
         let adjustedStep = selectedAccountType === 'acheteur' && step > 2 ? step - 1 : step;
         let percent = ((adjustedStep - 1) / (totalSteps - 1)) * 100;
         progressFill.style.width = `${percent}%`;
     }
 
-    /* ===================== VALIDATION ÉTAPE 2 ===================== */
-    function validateStep2() {
+    /* ===================== VALIDATION ACHETEUR ===================== */
+    function validateAcheteurStep2() {
         clearErrors();
         let valid = true;
 
-        if (selectedAccountType === 'acheteur') {
-            // Validation acheteur
-            ['nom', 'postnom', 'prenom', 'telephone'].forEach(id => {
-                const input = document.getElementById(id);
-                if (!input.value.trim()) {
-                    showError(input, 'Ce champ est obligatoire');
-                    valid = false;
-                }
-            });
-
-            // Validation téléphone
-            const telInput = document.getElementById('telephone');
-            if (telInput.value.trim() && !validatePhoneNumber(telInput.value)) {
-                showError(telInput, 'Format invalide. Ex: +243 81 123 4567');
+        // Validation des champs acheteur
+        const acheteurFields = ['nom', 'postnom', 'prenom', 'telephone'];
+        acheteurFields.forEach(id => {
+            const input = document.getElementById(id);
+            if (!input.value.trim()) {
+                showError(input, 'Ce champ est obligatoire');
                 valid = false;
             }
-        } else {
-            // Validation vendeur - informations entreprise
-            ['nom_entreprise', 'telephone_entreprise', 'email_entreprise', 'adresse_entreprise'].forEach(id => {
-                const input = document.getElementById(id);
-                if (!input.value.trim()) {
-                    showError(input, 'Ce champ est obligatoire');
-                    valid = false;
-                }
-            });
+        });
 
-            // Validation vendeur - informations propriétaire
-            ['nom_proprietaire', 'postnom_proprietaire', 'prenom_proprietaire', 'fonction_proprietaire'].forEach(id => {
-                const input = document.getElementById(id);
-                if (!input.value.trim()) {
-                    showError(input, 'Ce champ est obligatoire');
-                    valid = false;
-                }
-            });
-
-            // Validation email entreprise
-            const emailInput = document.getElementById('email_entreprise');
-            if (emailInput.value.trim() && !validateEmail(emailInput.value)) {
-                showError(emailInput, 'Format d\'email invalide');
-                valid = false;
-            }
-
-            // Validation téléphone entreprise
-            const telEntrepriseInput = document.getElementById('telephone_entreprise');
-            if (telEntrepriseInput.value.trim() && !validatePhoneNumber(telEntrepriseInput.value)) {
-                showError(telEntrepriseInput, 'Format invalide. Ex: +243 81 123 4567');
-                valid = false;
-            }
+        // Validation téléphone
+        const telInput = document.getElementById('telephone');
+        if (telInput.value.trim() && !validatePhoneNumber(telInput.value)) {
+            showError(telInput, 'Format invalide. Ex: +243 81 123 4567');
+            valid = false;
         }
 
-        // Validation mot de passe (commun aux deux types)
+        // Validation mot de passe
         if (!validatePasswordFields()) valid = false;
+
         return valid;
     }
 
+    /* ===================== VALIDATION VENDEUR ===================== */
+    function validateVendeurStep2() {
+        clearErrors();
+        let valid = true;
+
+        // Validation entreprise
+        const entrepriseFields = ['nom_entreprise', 'telephone_entreprise', 'email_entreprise', 'adresse_entreprise'];
+        entrepriseFields.forEach(id => {
+            const input = document.getElementById(id);
+            if (!input.value.trim()) {
+                showError(input, 'Ce champ est obligatoire');
+                valid = false;
+            }
+        });
+
+        // Validation propriétaire
+        const proprietaireFields = ['nom_proprietaire', 'postnom_proprietaire', 'prenom_proprietaire', 'fonction_proprietaire'];
+        proprietaireFields.forEach(id => {
+            const input = document.getElementById(id);
+            if (!input.value.trim()) {
+                showError(input, 'Ce champ est obligatoire');
+                valid = false;
+            }
+        });
+
+        // Validation email
+        const emailInput = document.getElementById('email_entreprise');
+        if (emailInput.value.trim() && !validateEmail(emailInput.value)) {
+            showError(emailInput, 'Format d\'email invalide');
+            valid = false;
+        }
+
+        // Validation téléphone
+        const telEntrepriseInput = document.getElementById('telephone_entreprise');
+        if (telEntrepriseInput.value.trim() && !validatePhoneNumber(telEntrepriseInput.value)) {
+            showError(telEntrepriseInput, 'Format invalide. Ex: +243 81 123 4567');
+            valid = false;
+        }
+
+        // Validation mot de passe
+        if (!validatePasswordFields()) valid = false;
+
+        return valid;
+    }
+
+    /* ===================== VALIDATION GÉNÉRALE ===================== */
     function validatePhoneNumber(phone) {
-        // Format congolais: +243 suivi de 9 chiffres
         const regex = /^\+243\s?\d{2}\s?\d{3}\s?\d{4}$/;
         return regex.test(phone);
     }
@@ -240,25 +330,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function validatePasswordFields() {
         let valid = true;
-
-        // Règles de mot de passe
         const password = passwordInput.value;
-        const rules = {
-            length: password.length >= 8,
-            uppercase: /[A-Z]/.test(password),
-            lowercase: /[a-z]/.test(password),
-            number: /[0-9]/.test(password),
-            special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-        };
 
-        // Vérifier toutes les règles
-        const allRulesValid = Object.values(rules).every(rule => rule);
-        if (!allRulesValid) {
-            showError(passwordInput, 'Le mot de passe ne respecte pas toutes les exigences');
+        // 3 CONDITIONS : longueur, chiffre, et lettre
+        const hasLength = password.length >= 8;
+        const hasNumber = /[0-9]/.test(password);
+        const hasLetter = /[a-zA-Z]/.test(password); // Au moins une lettre (majuscule ou minuscule)
+
+        // Vérifier toutes les conditions
+        if (!hasLength || !hasNumber || !hasLetter) {
+            let errorMsg = 'Le mot de passe doit :';
+            if (!hasLength) errorMsg += ' avoir au moins 8 caractères;';
+            if (!hasNumber) errorMsg += ' contenir au moins un chiffre;';
+            if (!hasLetter) errorMsg += ' contenir au moins une lettre;';
+            showError(passwordInput, errorMsg);
             valid = false;
         }
 
-        // Confirmation du mot de passe
+        // Vérifier la confirmation
         if (password !== confirmPasswordInput.value) {
             showError(confirmPasswordInput, 'Les mots de passe ne correspondent pas');
             valid = false;
@@ -274,12 +363,11 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function validatePassword(password) {
+        // 3 règles : longueur, chiffre, lettre
         const rules = {
             length: password.length >= 8,
-            uppercase: /[A-Z]/.test(password),
-            lowercase: /[a-z]/.test(password),
             number: /[0-9]/.test(password),
-            special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+            letter: /[a-zA-Z]/.test(password) // Vérifie au moins une lettre
         };
 
         passwordRequirements.forEach(req => {
@@ -291,25 +379,21 @@ document.addEventListener('DOMContentLoaded', function () {
         const strengthBar = document.querySelector('.strength-bar');
         const strengthText = document.querySelector('.strength-text');
         
+        // Calcul basé sur 3 critères
         let strength = 0;
-        if (password.length >= 8) strength += 20;
-        if (/[A-Z]/.test(password)) strength += 20;
-        if (/[a-z]/.test(password)) strength += 20;
-        if (/[0-9]/.test(password)) strength += 20;
-        if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength += 20;
+        if (password.length >= 8) strength += 33; // 33% pour la longueur
+        if (/[0-9]/.test(password)) strength += 33; // 33% pour le chiffre
+        if (/[a-zA-Z]/.test(password)) strength += 34; // 34% pour la lettre
         
         strengthBar.style.width = `${strength}%`;
         
-        // Couleur selon la force
-        if (strength <= 40) {
+        // Ajuster les seuils pour 3 critères
+        if (strength <= 33) {
             strengthBar.style.background = '#e53935';
             strengthText.textContent = 'Faible';
-        } else if (strength <= 60) {
+        } else if (strength <= 66) {
             strengthBar.style.background = '#ff9800';
             strengthText.textContent = 'Moyen';
-        } else if (strength <= 80) {
-            strengthBar.style.background = '#ffb300';
-            strengthText.textContent = 'Bon';
         } else {
             strengthBar.style.background = '#4CAF50';
             strengthText.textContent = 'Fort';
@@ -328,7 +412,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* ===================== ABONNEMENT (Vendeur uniquement) ===================== */
     function setupSubscriptionListeners() {
-        // Boutons de sélection de plan
         selectPlanBtns.forEach(btn => {
             btn.addEventListener('click', function () {
                 const plan = this.dataset.plan;
@@ -336,7 +419,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 
-        // Options de durée
         durationOptions.forEach(option => {
             option.addEventListener('change', function () {
                 if (this.checked) {
@@ -350,16 +432,12 @@ document.addEventListener('DOMContentLoaded', function () {
     function selectPlan(plan) {
         selectedPlan = plan;
         
-        // Mettre à jour l'affichage des options
         subscriptionOptions.forEach(option => {
             option.classList.remove('selected');
         });
         document.querySelector(`.subscription-option[data-plan="${plan}"]`).classList.add('selected');
         
-        // Activer le bouton suivant
         nextStep3Btn.disabled = false;
-        
-        // Afficher la section paiement
         paymentSection.style.display = 'block';
         updatePaymentSection();
         
@@ -396,22 +474,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updatePaymentSection() {
         if (!selectedPlan) return;
-        
-        // Mettre à jour l'affichage du prix
-        const price = getPlanPrice(selectedPlan, selectedDuration);
-        const planName = {
-            essai: 'Essai Gratuit',
-            standard: 'Standard',
-            premium: 'Premium'
-        }[selectedPlan];
-        
-        const durationText = {
-            '1': '1 mois',
-            '3': '3 mois',
-            '6': '6 mois',
-            '12': '12 mois'
-        }[selectedDuration];
-        
         updatePaymentDetails();
     }
 
@@ -452,85 +514,96 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /* ===================== DONNÉES ===================== */
-    function saveFormData() {
+    function getFormData() {
         if (selectedAccountType === 'acheteur') {
-            formData.acheteur = {
-                nom: document.getElementById('nom').value,
-                postnom: document.getElementById('postnom').value,
-                prenom: document.getElementById('prenom').value,
-                telephone: document.getElementById('telephone').value
+            return {
+                accountType: 'acheteur',
+                password: passwordInput.value,
+                user: {
+                    nom: document.getElementById('nom').value,
+                    postnom: document.getElementById('postnom').value,
+                    prenom: document.getElementById('prenom').value,
+                    telephone: document.getElementById('telephone').value
+                }
             };
         } else {
-            formData.vendeur.entreprise = {
-                nom_entreprise: document.getElementById('nom_entreprise').value,
-                telephone_entreprise: document.getElementById('telephone_entreprise').value,
-                email_entreprise: document.getElementById('email_entreprise').value,
-                adresse_entreprise: document.getElementById('adresse_entreprise').value
-            };
-            
-            formData.vendeur.proprietaire = {
-                nom: document.getElementById('nom_proprietaire').value,
-                postnom: document.getElementById('postnom_proprietaire').value,
-                prenom: document.getElementById('prenom_proprietaire').value,
-                fonction: document.getElementById('fonction_proprietaire').value
-            };
-        }
-        
-        formData.password = passwordInput.value;
-        formData.accountType = selectedAccountType;
-        
-        if (selectedAccountType === 'vendeur' && selectedPlan) {
-            formData.subscription = {
-                plan: selectedPlan,
-                duration: selectedDuration,
-                price: getPlanPrice(selectedPlan, selectedDuration),
-                payment_method: selectedPaymentMethod
+            return {
+                accountType: 'vendeur',
+                password: passwordInput.value,
+                entreprise: {
+                    nom_entreprise: document.getElementById('nom_entreprise').value,
+                    telephone_entreprise: document.getElementById('telephone_entreprise').value,
+                    email_entreprise: document.getElementById('email_entreprise').value,
+                    adresse_entreprise: document.getElementById('adresse_entreprise').value
+                },
+                proprietaire: {
+                    nom: document.getElementById('nom_proprietaire').value,
+                    postnom: document.getElementById('postnom_proprietaire').value,
+                    prenom: document.getElementById('prenom_proprietaire').value,
+                    fonction: document.getElementById('fonction_proprietaire').value
+                },
+                subscription: selectedPlan ? {
+                    plan: selectedPlan,
+                    duration: selectedDuration,
+                    price: getPlanPrice(selectedPlan, selectedDuration),
+                    payment_method: selectedPaymentMethod
+                } : null
             };
         }
     }
 
     /* ===================== RÉSUMÉ ===================== */
     function updateSummary() {
-        // Type de compte
         const accountTypeElement = document.getElementById('summary-account-type');
         accountTypeElement.textContent = selectedAccountType === 'acheteur' 
             ? 'Compte Acheteur (Gratuit)' 
             : 'Compte Vendeur';
         
-        // Informations personnelles/entreprise
         if (selectedAccountType === 'acheteur') {
-            const container = document.querySelector('#summary-personal-info .summary-details');
-            container.innerHTML = `
-                <p><strong>Nom :</strong> ${formData.acheteur.nom}</p>
-                <p><strong>Post-nom :</strong> ${formData.acheteur.postnom}</p>
-                <p><strong>Prénom :</strong> ${formData.acheteur.prenom}</p>
-                <p><strong>Téléphone :</strong> ${formData.acheteur.telephone}</p>
-            `;
-            document.getElementById('summary-business-info').style.display = 'none';
+            updateAcheteurSummary();
         } else {
-            // Informations entreprise
-            const businessContainer = document.querySelector('#summary-business-info .summary-details');
-            businessContainer.innerHTML = `
-                <p><strong>Nom entreprise :</strong> ${formData.vendeur.entreprise.nom_entreprise}</p>
-                <p><strong>Téléphone :</strong> ${formData.vendeur.entreprise.telephone_entreprise}</p>
-                <p><strong>Email :</strong> ${formData.vendeur.entreprise.email_entreprise}</p>
-                <p><strong>Adresse :</strong> ${formData.vendeur.entreprise.adresse_entreprise}</p>
-            `;
-            document.getElementById('summary-business-info').style.display = 'block';
-            
-            // Informations propriétaire
-            const personalContainer = document.querySelector('#summary-personal-info .summary-details');
-            personalContainer.innerHTML = `
-                <p><strong>Nom :</strong> ${formData.vendeur.proprietaire.nom}</p>
-                <p><strong>Post-nom :</strong> ${formData.vendeur.proprietaire.postnom}</p>
-                <p><strong>Prénom :</strong> ${formData.vendeur.proprietaire.prenom}</p>
-                <p><strong>Fonction :</strong> ${formData.vendeur.proprietaire.fonction}</p>
-            `;
+            updateVendeurSummary();
         }
+    }
+
+    function updateAcheteurSummary() {
+        const formData = getFormData();
+        const container = document.querySelector('#summary-personal-info .summary-details');
+        container.innerHTML = `
+            <p><strong>Nom :</strong> ${formData.user.nom}</p>
+            <p><strong>Post-nom :</strong> ${formData.user.postnom}</p>
+            <p><strong>Prénom :</strong> ${formData.user.prenom}</p>
+            <p><strong>Téléphone :</strong> ${formData.user.telephone}</p>
+        `;
+        document.getElementById('summary-business-info').style.display = 'none';
+        document.getElementById('summary-subscription-info').style.display = 'none';
+    }
+
+    function updateVendeurSummary() {
+        const formData = getFormData();
         
-        // Informations d'abonnement (vendeur uniquement)
-        const subscriptionContainer = document.querySelector('#summary-subscription-info .summary-details');
-        if (selectedAccountType === 'vendeur' && formData.subscription) {
+        // Informations entreprise
+        const businessContainer = document.querySelector('#summary-business-info .summary-details');
+        businessContainer.innerHTML = `
+            <p><strong>Nom entreprise :</strong> ${formData.entreprise.nom_entreprise}</p>
+            <p><strong>Téléphone :</strong> ${formData.entreprise.telephone_entreprise}</p>
+            <p><strong>Email :</strong> ${formData.entreprise.email_entreprise}</p>
+            <p><strong>Adresse :</strong> ${formData.entreprise.adresse_entreprise}</p>
+        `;
+        document.getElementById('summary-business-info').style.display = 'block';
+        
+        // Informations propriétaire
+        const personalContainer = document.querySelector('#summary-personal-info .summary-details');
+        personalContainer.innerHTML = `
+            <p><strong>Nom :</strong> ${formData.proprietaire.nom}</p>
+            <p><strong>Post-nom :</strong> ${formData.proprietaire.postnom}</p>
+            <p><strong>Prénom :</strong> ${formData.proprietaire.prenom}</p>
+            <p><strong>Fonction :</strong> ${formData.proprietaire.fonction}</p>
+        `;
+        
+        // Informations abonnement
+        if (formData.subscription) {
+            const subscriptionContainer = document.querySelector('#summary-subscription-info .summary-details');
             const planNames = {
                 essai: 'Essai Gratuit',
                 standard: 'Standard',
@@ -574,145 +647,262 @@ document.addEventListener('DOMContentLoaded', function () {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création du compte...';
 
-        // DÉTERMINER L'ENDPOINT EN FONCTION DU TYPE DE COMPTE
-        let endpoint = '';
+        // Appeler la fonction appropriée selon le type de compte
         if (selectedAccountType === 'acheteur') {
-            endpoint = '../backend/auth/inscription_client.php';
+            await handleAcheteurInscription();
         } else {
-            endpoint = '../backend/auth/inscription_vendeur.php';
+            await handleVendeurInscription();
         }
+    }
 
-        // PRÉPARER LES DONNÉES SPÉCIFIQUES POUR CHAQUE ENDPOINT
-        let requestData = {};
-        
-        if (selectedAccountType === 'acheteur') {
-            // Format pour inscription_client.php
-            requestData = {
-                accountType: 'acheteur',
-                password: formData.password,
-                user: formData.acheteur
-            };
-        } else {
-            // Format pour inscription_vendeur.php
-            requestData = {
-                accountType: 'vendeur',
-                password: formData.password,
-                entreprise: formData.vendeur.entreprise,
-                proprietaire: formData.vendeur.proprietaire,
-                subscription: formData.subscription
-            };
-        }
-
+    /* ===================== FONCTION INSCRIPTION ACHETEUR ===================== */
+    async function handleAcheteurInscription() {
         try {
-            const response = await fetch(endpoint, {
+            // Validation finale
+            if (!validateAcheteurStep2()) {
+                throw new Error('Veuillez corriger les erreurs');
+            }
+
+            const formData = getFormData();
+            
+            // DÉBOGAGE
+            console.log('📤 Envoi des données acheteur:', formData);
+            
+            // IMPORTANT: Chemin corrigé
+            const response = await fetch('/backend/auth/inscription_client.php', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
-                body: JSON.stringify(requestData)
+                body: JSON.stringify(formData)
             });
 
-            // Vérifier si la réponse est OK
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
-            }
+            // DÉBOGAGE
+            console.log('📥 Statut HTTP:', response.status);
+            console.log('📥 URL appelée:', '../backend/auth/inscription_client.php');
 
             const result = await response.json();
+            console.log('📥 Réponse JSON:', result);
 
-            if (result.success) {
-                // GESTION DIFFÉRENTE SELON LE TYPE DE COMPTE
-                if (selectedAccountType === 'acheteur') {
-                    handleAcheteurSuccess(result);
+            if (!response.ok) {
+                // GÉRER SPÉCIFIQUEMENT LES DIFFÉRENTES ERREURS
+                if (response.status === 409) {
+                    throw new Error(result.message || 'Ce numéro de téléphone est déjà utilisé');
+                    
+                } else if (response.status === 400) {
+                    throw new Error(result.message || 'Données invalides. Veuillez vérifier les informations.');
+                    
+                } else if (response.status === 500) {
+                    console.error('Erreur serveur détaillée:', result);
+                    throw new Error(result.message || 'Erreur serveur. Veuillez réessayer plus tard.');
+                    
                 } else {
-                    handleVendeurSuccess(result);
+                    throw new Error(result.message || `Erreur (${response.status})`);
                 }
-            } else {
+            }
+
+            // Vérifier que success est true
+            if (result.success !== true) {
                 throw new Error(result.message || 'Erreur lors de la création du compte');
             }
 
+            handleAcheteurSuccess(result);
+
         } catch (err) {
-            console.error('Erreur détaillée:', err);
+            console.error('❌ Erreur inscription acheteur:', err);
             
-            let errorMessage = 'Erreur de connexion au serveur';
-            if (err.message.includes('HTTP')) {
-                errorMessage = 'Erreur de communication avec le serveur';
-            } else if (err.message.includes('JSON')) {
-                errorMessage = 'Réponse du serveur invalide';
-            } else {
-                errorMessage = err.message;
+            const errorMessage = err.message || 'Erreur de connexion au serveur';
+            
+            // Mettre en évidence le champ concerné si c'est un conflit
+            if (errorMessage.includes('téléphone') || errorMessage.includes('phone')) {
+                const telInput = document.getElementById('telephone');
+                showError(telInput, 'Ce numéro est déjà utilisé');
+                // Retourner à l'étape 2 pour corriger
+                goToStep(2);
             }
             
             showNotification(errorMessage, 'error');
+            
+            // Réactiver le bouton
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Finaliser l\'inscription';
         }
     }
 
-    /* ===================== GESTION SUCCÈS ACHETEUR ===================== */
     function handleAcheteurSuccess(result) {
-        showNotification('Compte créé avec succès !', 'success');
+        showNotification('Compte créé avec succès ! Redirection en cours...', 'success');
         
-        // Attendre 1.5 secondes pour que l'utilisateur voie le message
+        // DÉBOGAGE
+        console.log('✅ Données reçues:', result);
+        
         setTimeout(() => {
-            // Vérifier si WhatsApp doit être ouvert
-            if (result.whatsapp_redirect && result.whatsapp_redirect.immediate && result.whatsapp_redirect.url) {
+            // CORRECTION: Vérifier la structure correcte
+            if (result.whatsapp && result.whatsapp.url) {
+                console.log('📱 URL WhatsApp trouvée (nouvelle structure):', result.whatsapp.url);
+                openWhatsApp(result.whatsapp.url, result);
+                
+            } else if (result.whatsapp_redirect && result.whatsapp_redirect.url) {
+                // Compatibilité avec ancienne structure
+                console.log('📱 URL WhatsApp trouvée (ancienne structure):', result.whatsapp_redirect.url);
                 openWhatsApp(result.whatsapp_redirect.url, result);
-            } else if (result.verification && result.verification.whatsapp_url) {
-                // Compatibilité avec l'ancien format
-                openWhatsApp(result.verification.whatsapp_url, result);
+                
+            } else if (result.redirect) {
+                console.log('🔄 Redirection vers:', result.redirect);
+                window.location.href = result.redirect;
+                
             } else {
-                // Pas d'URL WhatsApp, redirection normale
-                showNotification('Redirection vers la vérification...', 'info');
-                setTimeout(() => {
-                    window.location.href = '../frontend/double_authen.php';
-                }, 2000);
+                console.log('🔄 Redirection par défaut vers double_authen.php');
+                window.location.href = './double_authen.php';
             }
         }, 1500);
     }
 
-    /* ===================== OUVERTURE WHATSAPP ===================== */
-    function openWhatsApp(whatsappUrl, result) {
-        showNotification('Ouverture de WhatsApp...', 'info');
-        
-        // Ouvrir WhatsApp dans un nouvel onglet
-        const whatsappWindow = window.open(
-            whatsappUrl, 
-            '_blank',
-            'noopener,noreferrer'
-        );
-        
-        // Vérifier si la fenêtre s'est ouverte
-        if (!whatsappWindow || whatsappWindow.closed || typeof whatsappWindow.closed === 'undefined') {
-            // Popup bloquée par le navigateur
-            handlePopupBlocked(whatsappUrl);
-        } else {
-            // WhatsApp ouvert avec succès
-            showNotification('WhatsApp ouvert! Envoyez le message pré-rempli.', 'success');
+    /* ===================== FONCTION INSCRIPTION VENDEUR ===================== */
+    async function handleVendeurInscription() {
+        try {
+            // Validation finale
+            if (!validateVendeurStep2()) {
+                throw new Error('Veuillez corriger les erreurs');
+            }
+
+            if (!selectedPlan) {
+                throw new Error('Veuillez sélectionner un plan d\'abonnement');
+            }
+
+            const formData = getFormData();
+            
+            console.log('📤 Envoi des données vendeur:', formData);
+            
+            const response = await fetch('/backend/auth/inscription_vendeur.php', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            console.log('📥 Statut HTTP vendeur:', response.status);
+
+            const result = await response.json();
+            console.log('📥 Réponse JSON vendeur:', result);
+
+            if (!response.ok) {
+                if (response.status === 409) {
+                    let message = 'Ces informations sont déjà utilisées. ';
+                    
+                    if (result.message) {
+                        if (result.message.includes('téléphone') || result.message.includes('phone')) {
+                            message = `Ce téléphone d'entreprise est déjà utilisé. `;
+                        } else if (result.message.includes('email')) {
+                            message = `Cet email d'entreprise est déjà utilisé. `;
+                        } else if (result.message.includes('entreprise')) {
+                            message = `Ce nom d'entreprise est déjà pris. `;
+                        } else {
+                            message = result.message;
+                        }
+                    }
+                    
+                    throw new Error(message);
+                    
+                } else if (response.status === 400) {
+                    throw new Error(result.message || 'Données invalides.');
+                } else if (response.status === 500) {
+                    console.error('Erreur serveur vendeur:', result);
+                    throw new Error('Erreur serveur. Veuillez réessayer plus tard.');
+                } else {
+                    throw new Error(result.message || `Erreur (${response.status})`);
+                }
+            }
+
+            if (result.success !== true) {
+                throw new Error(result.message || 'Erreur lors de la création du compte');
+            }
+
+            handleVendeurSuccess(result);
+
+        } catch (err) {
+            console.error('❌ Erreur inscription vendeur:', err);
+            
+            const errorMessage = err.message || 'Erreur de connexion au serveur';
+            
+            // Mettre en évidence le champ concerné
+            if (errorMessage.includes('téléphone d\'entreprise') || errorMessage.includes('phone')) {
+                const telInput = document.getElementById('telephone_entreprise');
+                showError(telInput, 'Ce téléphone d\'entreprise est déjà utilisé');
+            } else if (errorMessage.includes('email d\'entreprise')) {
+                const emailInput = document.getElementById('email_entreprise');
+                showError(emailInput, 'Cet email d\'entreprise est déjà utilisé');
+            } else if (errorMessage.includes('nom d\'entreprise')) {
+                const entrepriseInput = document.getElementById('nom_entreprise');
+                showError(entrepriseInput, 'Ce nom d\'entreprise est déjà pris');
+            }
+            
+            showNotification(errorMessage, 'error');
+            
+            // Réactiver le bouton
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Finaliser l\'inscription';
         }
-        
-        // Afficher le compte à rebours pour le code
-        const waitTime = result.verification?.wait_time || 30;
-        startCodeCountdown(waitTime);
-        
-        // Rediriger vers la page de vérification après délai
-        scheduleRedirection(waitTime + 5); // +5 secondes de marge
     }
 
-    /* ===================== GESTION POPUP BLOQUÉE ===================== */
+    function handleVendeurSuccess(result) {
+        showNotification('Compte vendeur créé avec succès !', 'success');
+        
+        console.log('✅ Succès vendeur:', result);
+        
+        setTimeout(() => {
+            if (result.redirect_url) {
+                console.log('🔄 Redirection vendeur vers:', result.redirect_url);
+                window.location.href = result.redirect_url;
+            } else if (result.redirect) {
+                console.log('🔄 Redirection vendeur vers:', result.redirect);
+                window.location.href = result.redirect;
+            } else {
+                console.log('🔄 Redirection vendeur par défaut');
+                window.location.href = '../frontend/dashboard_vendeur.php';
+            }
+        }, 2000);
+    }
+
+    /* ===================== WHATSAPP FUNCTIONS ===================== */
+    function openWhatsApp(whatsappUrl, result) {
+        console.log('📱 Ouverture WhatsApp:', whatsappUrl);
+        showNotification('Ouverture de WhatsApp pour la vérification...', 'info');
+        
+        const whatsappWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+        
+        if (!whatsappWindow || whatsappWindow.closed || typeof whatsappWindow.closed === 'undefined') {
+            console.log('⚠️ Popup WhatsApp bloqué');
+            handlePopupBlocked(whatsappUrl);
+            
+            // Rediriger après un délai
+            setTimeout(() => {
+                const redirectUrl = result.redirect || result.redirect_url || './double_authen.php';
+                console.log('🔄 Redirection après popup bloqué:', redirectUrl);
+                window.location.href = redirectUrl;
+            }, 5000);
+        } else {
+            console.log('✅ WhatsApp ouvert avec succès');
+            showNotification('WhatsApp ouvert! Envoyez le message pré-rempli.', 'success');
+            
+            // Rediriger après un délai
+            setTimeout(() => {
+                const redirectUrl = result.redirect || result.redirect_url || './double_authen.php';
+                console.log('🔄 Redirection après WhatsApp:', redirectUrl);
+                window.location.href = redirectUrl;
+            }, 3000);
+        }
+    }
+
     function handlePopupBlocked(whatsappUrl) {
         showNotification('WhatsApp n\'a pas pu s\'ouvrir automatiquement', 'warning');
-        
-        // Créer un bouton manuel pour ouvrir WhatsApp
         createManualWhatsAppButton(whatsappUrl);
-        
-        // Afficher des instructions
         showNotification('Cliquez sur le bouton vert pour ouvrir WhatsApp manuellement', 'info');
     }
 
-    /* ===================== BOUTON MANUEL WHATSAPP ===================== */
     function createManualWhatsAppButton(whatsappUrl) {
-        // Créer un conteneur pour le bouton
         const buttonContainer = document.createElement('div');
         buttonContainer.id = 'whatsapp-manual-button-container';
         buttonContainer.style.cssText = `
@@ -729,7 +919,6 @@ document.addEventListener('DOMContentLoaded', function () {
             backdrop-filter: blur(5px);
         `;
         
-        // Contenu du bouton
         buttonContainer.innerHTML = `
             <div style="
                 background: white;
@@ -785,20 +974,17 @@ document.addEventListener('DOMContentLoaded', function () {
         
         document.body.appendChild(buttonContainer);
         
-        // Ajouter l'événement au bouton WhatsApp
         document.getElementById('manual-whatsapp-btn').addEventListener('click', function() {
             window.open(whatsappUrl, '_blank');
             buttonContainer.remove();
             showNotification('WhatsApp ouvert! Envoyez le message.', 'success');
         });
         
-        // Ajouter l'événement au bouton Fermer
         document.getElementById('close-manual-btn').addEventListener('click', function() {
             buttonContainer.remove();
             showNotification('Vous pouvez ouvrir WhatsApp plus tard', 'info');
         });
         
-        // Fermer en cliquant sur l'arrière-plan
         buttonContainer.addEventListener('click', function(e) {
             if (e.target === buttonContainer) {
                 buttonContainer.remove();
@@ -806,14 +992,11 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    /* ===================== COMPTE À REBOURS CODE ===================== */
     function startCodeCountdown(seconds) {
         let remaining = seconds;
         
-        // Afficher le premier message
         showNotification(`Vérifiez WhatsApp dans ${remaining} secondes pour votre code...`, 'info');
         
-        // Mettre à jour toutes les 10 secondes
         const countdownInterval = setInterval(() => {
             remaining -= 10;
             if (remaining > 0) {
@@ -825,78 +1008,34 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 10000);
     }
 
-    /* ===================== PLANIFICATION REDIRECTION ===================== */
     function scheduleRedirection(seconds) {
         setTimeout(() => {
             showNotification('Redirection vers la vérification du code...', 'info');
             setTimeout(() => {
-                window.location.href = '../frontend/double_authen.php';
+                window.location.href = './double_authen.php';
             }, 1500);
         }, seconds * 1000);
-    }
-
-    /* ===================== GESTION SUCCÈS VENDEUR ===================== */
-    function handleVendeurSuccess(result) {
-        showNotification('Compte vendeur créé avec succès !', 'success');
-        
-        // Redirection après 2 secondes
-        setTimeout(() => {
-            if (result.redirect_url) {
-                window.location.href = result.redirect_url;
-            } else {
-                window.location.href = '../frontend/dashboard_vendeur.php';
-            }
-        }, 2000);
-    }
-
-    /* ===================== FONCTION DE SOUMISSION POUR ACHETEUR ===================== */
-    async function submitAcheteur(formData) {
-        const response = await fetch('../backend/auth/inscription_client.php', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                accountType: 'acheteur',
-                password: formData.password,
-                user: formData.acheteur
-            })
-        });
-        return response;
-    }
-
-    /* ===================== FONCTION DE SOUMISSION POUR VENDEUR ===================== */
-    async function submitVendeur(formData) {
-        const response = await fetch('../backend/auth/inscription_vendeur.php', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                accountType: 'vendeur',
-                password: formData.password,
-                entreprise: formData.vendeur.entreprise,
-                proprietaire: formData.vendeur.proprietaire,
-                subscription: formData.subscription
-            })
-        });
-        return response;
     }
 
     /* ===================== UTILITAIRES ===================== */
     function showError(input, msg) {
         const group = input.closest('.form-group');
         group.classList.add('error');
-        group.querySelector('.error-message').textContent = msg;
+        const errorEl = group.querySelector('.error-message');
+        if (errorEl) {
+            errorEl.textContent = msg;
+            errorEl.style.display = 'block';
+        }
     }
 
     function clearErrors() {
         document.querySelectorAll('.form-group').forEach(g => {
             g.classList.remove('error');
             const e = g.querySelector('.error-message');
-            if (e) e.textContent = '';
+            if (e) {
+                e.textContent = '';
+                e.style.display = 'none';
+            }
         });
     }
 
@@ -904,27 +1043,40 @@ document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('input').forEach(input => {
             input.addEventListener('input', () => {
                 const g = input.closest('.form-group');
-                if (g) g.classList.remove('error');
+                if (g) {
+                    g.classList.remove('error');
+                    const e = g.querySelector('.error-message');
+                    if (e) e.style.display = 'none';
+                }
             });
         });
     }
 
-    function showNotification(message, type = 'info') {
-        // Supprimer les notifications précédentes
+    function showNotification(message, type = 'info', duration = 5000) {
         document.querySelectorAll('.notification').forEach(n => n.remove());
         
-        // Créer la notification
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
-        notification.innerHTML = `
-            <div class="notification-content">
-                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-                <span>${message}</span>
-            </div>
-            <button class="notification-close"><i class="fas fa-times"></i></button>
-        `;
+        
+        // Si le message contient du HTML, ne pas l'échapper
+        if (typeof message === 'string' && message.includes('<')) {
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+                <button class="notification-close"><i class="fas fa-times"></i></button>
+            `;
+        } else {
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+                <button class="notification-close"><i class="fas fa-times"></i></button>
+            `;
+        }
 
-        // Styles de la notification
         notification.style.cssText = `
             position: fixed;
             top: 20px;
@@ -944,7 +1096,6 @@ document.addEventListener('DOMContentLoaded', function () {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         `;
 
-        // Styles pour le contenu
         const contentStyle = `
             display: flex;
             align-items: center;
@@ -953,7 +1104,6 @@ document.addEventListener('DOMContentLoaded', function () {
         `;
         notification.querySelector('.notification-content').style.cssText = contentStyle;
 
-        // Bouton de fermeture
         const closeBtn = notification.querySelector('.notification-close');
         closeBtn.style.cssText = `
             background: none;
@@ -967,20 +1117,13 @@ document.addEventListener('DOMContentLoaded', function () {
             transition: opacity 0.2s;
         `;
 
-        closeBtn.addEventListener('mouseover', () => {
-            closeBtn.style.opacity = '1';
-        });
-        
-        closeBtn.addEventListener('mouseout', () => {
-            closeBtn.style.opacity = '0.8';
-        });
-
+        closeBtn.addEventListener('mouseover', () => closeBtn.style.opacity = '1');
+        closeBtn.addEventListener('mouseout', () => closeBtn.style.opacity = '0.8');
         closeBtn.addEventListener('click', () => {
             notification.style.animation = 'slideOut 0.3s ease';
             setTimeout(() => notification.remove(), 300);
         });
 
-        // Animation
         if (!document.querySelector('#notification-styles')) {
             const style = document.createElement('style');
             style.id = 'notification-styles';
@@ -997,11 +1140,9 @@ document.addEventListener('DOMContentLoaded', function () {
             document.head.appendChild(style);
         }
 
-        // Ajouter la notification
         document.body.appendChild(notification);
 
-        // Auto-suppression après 5 secondes (sauf erreurs)
-        const autoRemoveTime = type === 'error' ? 8000 : 5000;
+        const autoRemoveTime = type === 'error' ? 8000 : (type === 'info' ? duration : 5000);
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.style.animation = 'slideOut 0.3s ease';
@@ -1013,7 +1154,4 @@ document.addEventListener('DOMContentLoaded', function () {
     /* ===================== DÉMARRAGE ===================== */
     init();
 
-    /* ===================== FONCTION DE TEST ===================== */
-    // Pour tester l'ouverture de WhatsApp, décommentez la ligne suivante :
-    // testWhatsAppOpening();
 });
