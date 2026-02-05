@@ -169,8 +169,9 @@ try {
 
         // ==================== RÉPONSE SUCCÈS ====================
         session_start();
-        $_SESSION['auth_user_id'] = $userId;
-        $_SESSION['auth_phone'] = $dbPhone;
+        $_SESSION['user_id'] = $userId;
+        $_SESSION['username'] = $dbPhone;
+        $_SESSION['user_type'] = "client";
         $_SESSION['auth_created_at'] = time();
         $_SESSION['verification_code'] = $authCode; // Temporaire pour vérification
 

@@ -263,7 +263,7 @@ try {
     session_start();
     session_regenerate_id(true);
     
-    $_SESSION['client_id'] = $clientId;
+    $_SESSION['user_id'] = $clientId;
     $_SESSION['client_nom'] = $name;
     $_SESSION['client_telephone'] = $telephoneClean;
     $_SESSION['verification_code'] = $verificationCode;

@@ -1,3 +1,10 @@
+<?php
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header('Location: ../');
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -6,7 +13,7 @@
     <title>Double Authentification - S'alacoop</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../style/double_authen.css">
+    <link rel="stylesheet" href="../style/css/double_authen.css">
 </head>
 <body>
     <div class="container">
@@ -16,7 +23,7 @@
                 <div class="logo-icon">
                     <i class="fas fa-shield-alt"></i>
                 </div>
-                <h1>Salacope</h1>
+                <h1>S'alacoop</h1>
                 <p>Double authentification</p>
             </div>
 
@@ -127,7 +134,7 @@
                     <div class="help-item">
                         <h4><i class="fas fa-phone"></i> Contactez le support</h4>
                         <p><strong>WhatsApp :</strong> +243 962 763 130</p>
-                        <p><strong>Email :</strong> support@salacope.com</p>
+                        <p><strong>Email :</strong> support@salacoop.com</p>
                     </div>
                 </div>
             </div>

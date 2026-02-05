@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeHelpModal = document.getElementById('close-help-modal');
     
     // Variables
-    let verificationCode = '';
     let codeExpiryTime = null;
     let resendTimer = 60; // 60 secondes pour renvoyer
     let verificationAttempts = 0;
@@ -26,11 +25,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialisation
     init();
     
-    function init() {
+    async function init() {
         console.log('🔧 Initialisation de la double authentification');
         
-        // Récupérer les données de session
-        loadUserData();
+        // Récupérer les données de session depuis le serveur
+        await loadUserData();
         
         // Configurer les écouteurs d'événements
         setupEventListeners();
@@ -43,32 +42,51 @@ document.addEventListener('DOMContentLoaded', function() {
         startResendTimer();
     }
     
-    function loadUserData() {
-        // Récupérer les données depuis la session
-        // (Dans un cas réel, vous récupéreriez cela depuis le backend)
-        const sessionData = {
-            phone: localStorage.getItem('client_telephone') || '+243 81 234 5678',
-            whatsappSent: localStorage.getItem('whatsapp_sent') === 'true',
-            expiryTime: localStorage.getItem('verification_expires') || getFutureTime(30)
-        };
-        
-        userPhone.textContent = sessionData.phone;
-        codeExpiryTime = new Date(sessionData.expiryTime);
-        
-        // Afficher/masquer le statut WhatsApp
-        if (sessionData.whatsappSent) {
-            whatsappStatus.style.display = 'flex';
-        } else {
-            whatsappStatus.style.display = 'none';
+    async function loadUserData() {
+        try {
+            // Récupérer les données de session depuis le backend
+            const response = await fetch('/backend/auth/get_session_data.php', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'include' // Important pour les cookies de session
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('👤 Données session chargées:', data);
+                
+                if (data.success && data.session) {
+                    const session = data.session;
+                    userPhone.textContent = session.client_telephone || 'Non disponible';
+                    
+                    // Convertir la date d'expiration
+                    if (session.verification_expires) {
+                        codeExpiryTime = new Date(session.verification_expires);
+                    }
+                    
+                    // Afficher/masquer le statut WhatsApp
+                    if (session.whatsapp_sent) {
+                        whatsappStatus.style.display = 'flex';
+                    } else {
+                        whatsappStatus.style.display = 'none';
+                    }
+                } else {
+                    // Rediriger si pas de session
+                    showNotification('Session expirée. Veuillez vous réinscrire.', 'error');
+                    setTimeout(() => {
+                        window.location.href = './index.php';
+                    }, 3000);
+                }
+            } else {
+                throw new Error('Erreur de chargement des données');
+            }
+        } catch (error) {
+            console.error('❌ Erreur chargement session:', error);
+            showNotification('Impossible de charger les données. Veuillez rafraîchir.', 'error');
         }
-        
-        console.log('👤 Données utilisateur chargées:', sessionData);
-    }
-    
-    function getFutureTime(minutes) {
-        const date = new Date();
-        date.setMinutes(date.getMinutes() + minutes);
-        return date.toISOString();
     }
     
     function setupEventListeners() {
@@ -326,16 +344,41 @@ document.addEventListener('DOMContentLoaded', function() {
         verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
         
         try {
-            // Simuler une vérification (dans un cas réel, appeler votre API)
-            await simulateVerification(enteredCode);
+            // Appeler l'API de vérification
+            const response = await fetch('/backend/auth/verify_code.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    verification_code: enteredCode
+                })
+            });
             
-            // Vérification réussie
-            showNotification('Code vérifié avec succès ! Redirection...', 'success');
+            const result = await response.json();
+            console.log('📥 Réponse vérification:', result);
             
-            // Rediriger vers le dashboard
-            setTimeout(() => {
-                window.location.href = './dashboard_client.php';
-            }, 1500);
+            if (response.ok && result.success) {
+                // Vérification réussie
+                showNotification('Code vérifié avec succès ! Redirection...', 'success');
+                
+                // Rediriger selon le type d'utilisateur
+                setTimeout(() => {
+                    if (result.user_type === 'admin') {
+                        window.location.href = '/admin/index.php';
+                    } else if (result.user_type === 'vendeur') {
+                        window.location.href = '/vendeur/index.php';
+                    } else {
+                        window.location.href = '/clients/index.php';
+                    }
+                }, 1500);
+                
+            } else {
+                // Vérification échouée
+                throw new Error(result.message || 'Code incorrect');
+            }
             
         } catch (error) {
             // Vérification échouée
@@ -347,12 +390,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const remainingAttempts = MAX_ATTEMPTS - verificationAttempts;
             
             if (remainingAttempts > 0) {
-                showNotification(`Code incorrect. ${remainingAttempts} tentative(s) restante(s).`, 'error');
+                showNotification(`${error.message}. ${remainingAttempts} tentative(s) restante(s).`, 'error');
             } else {
                 showNotification('Trop de tentatives. Veuillez demander un nouveau code.', 'error');
                 verifyBtn.disabled = true;
                 setTimeout(() => {
-                    window.location.href = './login.php';
+                    window.location.href = './index.php';
                 }, 3000);
             }
         } finally {
@@ -362,28 +405,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    function simulateVerification(code) {
-        return new Promise((resolve, reject) => {
-            // Simuler un délai réseau
-            setTimeout(() => {
-                // Pour la démo, accepter n'importe quel code à 6 chiffres
-                // En production, vous vérifierez contre la base de données
-                if (code.length === 6 && /^\d{6}$/.test(code)) {
-                    // Récupérer le vrai code depuis la session
-                    const realCode = localStorage.getItem('verification_code');
-                    
-                    if (realCode && code === realCode) {
-                        resolve({ success: true });
-                    } else {
-                        reject(new Error('Code incorrect'));
-                    }
-                } else {
-                    reject(new Error('Code invalide'));
-                }
-            }, 1000);
-        });
-    }
-    
     async function resendCode() {
         console.log('🔄 Renvoi du code demandé');
         
@@ -391,24 +412,40 @@ document.addEventListener('DOMContentLoaded', function() {
         resendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
         
         try {
-            // Simuler l'envoi du code
-            await simulateResendCode();
+            // Appeler l'API pour renvoyer le code
+            const response = await fetch('/backend/auth/resend_code.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'include'
+            });
             
-            showNotification('Nouveau code envoyé sur WhatsApp', 'success');
+            const result = await response.json();
+            console.log('📥 Réponse renvoi:', result);
             
-            // Réinitialiser le timer d'expiration
-            codeExpiryTime = new Date();
-            codeExpiryTime.setMinutes(codeExpiryTime.getMinutes() + 30);
-            
-            // Redémarrer les timers
-            startCodeExpiryTimer();
-            startResendTimer();
-            
-            // Effacer les champs
-            clearCodeInputs();
-            
-            // Réinitialiser les tentatives
-            verificationAttempts = 0;
+            if (response.ok && result.success) {
+                showNotification('Nouveau code envoyé sur WhatsApp', 'success');
+                
+                // Réinitialiser le timer d'expiration
+                if (result.new_expiry) {
+                    codeExpiryTime = new Date(result.new_expiry);
+                }
+                
+                // Redémarrer les timers
+                startCodeExpiryTimer();
+                startResendTimer();
+                
+                // Effacer les champs
+                clearCodeInputs();
+                
+                // Réinitialiser les tentatives
+                verificationAttempts = 0;
+                
+            } else {
+                throw new Error(result.message || 'Échec d\'envoi du code');
+            }
             
         } catch (error) {
             console.error('❌ Échec renvoi:', error);
@@ -417,19 +454,6 @@ document.addEventListener('DOMContentLoaded', function() {
             resendBtn.disabled = false;
             resendBtn.innerHTML = '<i class="fas fa-redo"></i> Renvoyer le code';
         }
-    }
-    
-    function simulateResendCode() {
-        return new Promise((resolve) => {
-            // Simuler un délai d'envoi
-            setTimeout(() => {
-                // Générer un nouveau code
-                const newCode = Math.floor(100000 + Math.random() * 900000).toString();
-                localStorage.setItem('verification_code', newCode);
-                console.log('📱 Nouveau code généré:', newCode);
-                resolve({ success: true, code: newCode });
-            }, 1500);
-        });
     }
     
     function openWhatsApp() {
