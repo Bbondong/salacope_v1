@@ -34,10 +34,9 @@ $db_username = $env['DB_USER'] ?? '';
 $db_password = $env['DB_PASS'] ?? '';
 $charset = $env['DB_CHARSET'] ?? 'utf8mb4';
 
-// Variables WhatsApp
+// Variables WhatsApp (optionnelles - ajoutez-les à votre .env)
 $whatsapp_token = $env['WHATSAPP_TOKEN'] ?? '';
 $whatsapp_phone_number_id = $env['WHATSAPP_PHONE_NUMBER_ID'] ?? '';
-$whatsapp_support_phone = $env['WHATSAPP_SUPPORT_PHONE'] ?? '243962763130';
 
 // Vérification BD
 if (empty($host) || empty($dbname) || empty($db_username)) {
@@ -48,11 +47,6 @@ if (empty($host) || empty($dbname) || empty($db_username)) {
         'message' => 'Configuration base de données incomplète',
         'timestamp' => time()
     ]));
-}
-
-// Vérification WhatsApp (avertissement seulement)
-if (empty($whatsapp_token) || empty($whatsapp_phone_number_id)) {
-    error_log('⚠️ Configuration WhatsApp incomplète dans .env');
 }
 
 try {
@@ -75,14 +69,21 @@ try {
     ]));
 }
 
-// Définir les constantes pour WhatsApp (facultatif, mais pratique)
-if (!defined('WHATSAPP_TOKEN')) {
+// Définir les constantes WhatsApp si elles existent
+if (!defined('WHATSAPP_TOKEN') && !empty($whatsapp_token)) {
     define('WHATSAPP_TOKEN', $whatsapp_token);
 }
-if (!defined('WHATSAPP_PHONE_NUMBER_ID')) {
+
+if (!defined('WHATSAPP_PHONE_NUMBER_ID') && !empty($whatsapp_phone_number_id)) {
     define('WHATSAPP_PHONE_NUMBER_ID', $whatsapp_phone_number_id);
 }
-if (!defined('WHATSAPP_SUPPORT_PHONE')) {
-    define('WHATSAPP_SUPPORT_PHONE', $whatsapp_support_phone);
+
+// Optionnel : Définir d'autres constantes utiles
+if (!defined('APP_ENV')) {
+    define('APP_ENV', $env['APP_ENV'] ?? 'production');
+}
+
+if (!defined('APP_DEBUG')) {
+    define('APP_DEBUG', ($env['APP_DEBUG'] ?? 'false') === 'true');
 }
 ?>
