@@ -1,277 +1,365 @@
 <?php
 // backend/auth/inscription_client.php
 
-// ===================== CONFIGURATION =====================
+// DÉBUT - Capturer toute sortie pour éviter la corruption JSON
+ob_start();
+
+// Activer l'affichage des erreurs MAIS les envoyer aux logs, pas à la sortie
+error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/../../logs/php_errors.log');
+ini_set('error_log', __DIR__ . '/php_errors.log');
 
-// Toujours retourner du JSON
-header('Content-Type: application/json; charset=utf-8');
-
-// ===================== FONCTIONS UTILITAIRES =====================
-function sendResponse($success, $data = [], $statusCode = 200) {
-    http_response_code($statusCode);
-    echo json_encode([
-        'success' => $success,
-        'data' => $data,
-        'timestamp' => date('Y-m-d H:i:s')
-    ], JSON_UNESCAPED_UNICODE);
-    exit();
-}
-
-function sendError($message, $statusCode = 500, $details = null) {
-    error_log("❌ inscription_client.php - $message" . ($details ? " - " . json_encode($details) : ""));
-    
-    http_response_code($statusCode);
+// Vérifier si le fichier config.php existe
+$configPath = __DIR__ . '/../config.php';
+if (!file_exists($configPath)) {
+    ob_end_clean();
+    http_response_code(500);
+    header('Content-Type: application/json');
     echo json_encode([
         'success' => false,
-        'message' => $message,
-        'timestamp' => date('Y-m-d H:i:s')
+        'message' => 'Fichier de configuration manquant'
     ], JSON_UNESCAPED_UNICODE);
     exit();
 }
 
-// ===================== VALIDATION =====================
+// Headers
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header('Content-Type: application/json; charset=utf-8');
+
+// Gérer les requêtes OPTIONS
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    ob_end_clean();
+    http_response_code(200);
+    exit();
+}
+
+// Vérifier que c'est une requête POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    sendError('Méthode non autorisée. Utilisez POST.', 405);
+    ob_end_clean();
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Méthode non autorisée'], JSON_UNESCAPED_UNICODE);
+    exit();
 }
 
-// Vérifier Content-Type
-$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
-if (stripos($contentType, 'application/json') === false) {
-    sendError('Content-Type doit être application/json', 400);
-}
-
-// Lire les données
+// Récupérer les données JSON
 $inputJSON = file_get_contents('php://input');
-if (empty($inputJSON)) {
-    sendError('Aucune donnée reçue', 400);
-}
-
 $input = json_decode($inputJSON, true);
+
 if (json_last_error() !== JSON_ERROR_NONE) {
-    sendError('JSON invalide: ' . json_last_error_msg(), 400);
+    ob_end_clean();
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'JSON invalide'], JSON_UNESCAPED_UNICODE);
+    exit();
 }
 
-// ===================== VALIDATION DES DONNÉES =====================
-if (!isset($input['accountType']) || $input['accountType'] !== 'acheteur') {
-    sendError('Type de compte invalide', 400);
+// Vérifier les données requises
+if (!isset($input['accountType'], $input['password'], $input['user'])) {
+    ob_end_clean();
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Données manquantes'], JSON_UNESCAPED_UNICODE);
+    exit();
 }
 
-if (!isset($input['user']) || !is_array($input['user'])) {
-    sendError('Données utilisateur manquantes', 400);
+if ($input['accountType'] !== 'acheteur') {
+    ob_end_clean();
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Type de compte invalide'], JSON_UNESCAPED_UNICODE);
+    exit();
 }
 
 $user = $input['user'];
-$requiredFields = ['nom', 'postnom', 'prenom', 'telephone'];
+$password = $input['password'];
 
-foreach ($requiredFields as $field) {
-    if (empty($user[$field] ?? '')) {
-        sendError("Le champ '$field' est requis", 400);
+// Vérifier les champs obligatoires
+$required = ['nom', 'postnom', 'prenom', 'telephone'];
+foreach ($required as $field) {
+    if (empty($user[$field])) {
+        ob_end_clean();
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => "Le champ $field est obligatoire"], JSON_UNESCAPED_UNICODE);
+        exit();
     }
 }
 
-// Valider le téléphone
+// Nettoyer les données
+$nom = trim($user['nom']);
+$postnom = trim($user['postnom']);
+$prenom = trim($user['prenom']);
 $telephone = trim($user['telephone']);
-if (!preg_match('/^\+243\s?\d{2}\s?\d{3}\s?\d{4}$/', $telephone)) {
-    sendError('Format de téléphone invalide. Ex: +243 81 123 4567', 400);
-}
 
-// Valider le mot de passe
-if (empty($input['password'] ?? '')) {
-    sendError('Mot de passe requis', 400);
-}
+// Normaliser le téléphone (enlever les espaces)
+$telephoneClean = preg_replace('/\s+/', '', $telephone);
 
-$password = $input['password'];
-if (strlen($password) < 8) {
-    sendError('Le mot de passe doit avoir au moins 8 caractères', 400);
-}
-
-// ===================== CONNEXION BASE DE DONNÉES =====================
+// Connexion à la base de données
 try {
-    // Inclure la configuration
     require_once __DIR__ . '/../config.php';
     
-    // Vérifier si la connexion existe
+    // Vérifier la connexion à la base de données
     if (!isset($bd) || !($bd instanceof PDO)) {
-        sendError('Connexion base de données non initialisée', 500);
+        throw new Exception("Connexion à la base de données non établie");
     }
-    
-    // ===================== VÉRIFIER SI LE TÉLÉPHONE EXISTE =====================
-    $checkQuery = "SELECT id_client FROM client WHERE telephone = :telephone LIMIT 1";
+
+    // Démarrer une transaction
+    $bd->beginTransaction();
+
+    // 1. Vérifier si le téléphone existe déjà
+    $checkQuery = "SELECT id_client FROM client WHERE tel = :telephone";
     $checkStmt = $bd->prepare($checkQuery);
-    $checkStmt->execute([':telephone' => $telephone]);
+    $checkStmt->execute(['telephone' => $telephoneClean]);
     
     if ($checkStmt->rowCount() > 0) {
-        sendError('Ce numéro de téléphone est déjà utilisé', 409);
+        $bd->rollBack();
+        ob_end_clean();
+        http_response_code(409);
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Ce numéro de téléphone est déjà utilisé'
+        ], JSON_UNESCAPED_UNICODE);
+        exit();
     }
-    
-    // ===================== CRÉER L'UTILISATEUR =====================
-    // Hasher le mot de passe
+
+    // 2. Générer un code de vérification
+    $verificationCode = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+    $hash_code = password_hash($verificationCode, PASSWORD_DEFAULT);
+    $expirationDate = date('Y-m-d H:i:s', strtotime('+30 minutes'));
+
+    // 3. Hacher le mot de passe
     $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+
+    // 4. Insérer dans la table client
+    $insertClientQuery = "
+        INSERT INTO client (tel, password, nom, post_nom, prenom, type_client, statut) 
+        VALUES (:telephone, :mot_de_passe, :nom, :postnom, :prenom, 'client', 'new')
+    ";
     
-    // Générer un ID client unique
-    $id_client = 'CLI_' . date('YmdHis') . '_' . substr(md5(uniqid()), 0, 8);
+    $insertClientStmt = $bd->prepare($insertClientQuery);
+    $result = $insertClientStmt->execute([
+        'telephone' => $telephoneClean,
+        'mot_de_passe' => $passwordHash,
+        'nom' => $nom,
+        'postnom' => $postnom,
+        'prenom' => $prenom
+    ]);
+
+    if (!$result) {
+        throw new Exception("Échec de l'insertion du client: " . implode(', ', $insertClientStmt->errorInfo()));
+    }
+
+    $clientId = $bd->lastInsertId();
+
+    // 5. Insérer le code dans verification_codes
+    $insertCodeQuery = "
+        INSERT INTO verification_codes (user_id, code, expires_at, statut) 
+        VALUES (:user_id, :code, :expires_at, 'pending')
+    ";
     
-    // Insérer dans la base
-    $insertQuery = "INSERT INTO client (
-        id_client, nom, postnom, prenom, telephone, 
-        mot_de_passe, statut, date_creation
-    ) VALUES (
-        :id_client, :nom, :postnom, :prenom, :telephone,
-        :mot_de_passe, 'new', NOW()
-    )";
-    
-    $insertStmt = $bd->prepare($insertQuery);
-    $insertData = [
-        ':id_client' => $id_client,
-        ':nom' => trim($user['nom']),
-        ':postnom' => trim($user['postnom']),
-        ':prenom' => trim($user['prenom']),
-        ':telephone' => $telephone,
-        ':mot_de_passe' => $passwordHash
-    ];
-    
-    if (!$insertStmt->execute($insertData)) {
-        sendError('Erreur lors de la création du compte', 500);
+    $insertCodeStmt = $bd->prepare($insertCodeQuery);
+    $codeInserted = $insertCodeStmt->execute([
+        'user_id' => $clientId,
+        'code' => $hash_code,
+        'expires_at' => $expirationDate
+    ]);
+
+    if (!$codeInserted) {
+        error_log("⚠️ Échec d'insertion dans verification_codes: " . print_r($insertCodeStmt->errorInfo(), true));
     }
     
-    // ===================== GÉNÉRER LE CODE DE VÉRIFICATION =====================
-    $verificationCode = sprintf('%06d', mt_rand(1, 999999));
-    $expiresAt = date('Y-m-d H:i:s', strtotime('+30 minutes'));
+    // 6. ENVOI WHATSAPP IMMÉDIAT (sans shell_exec - compatible InfinityFree)
+    $name = $nom . ' ' . $prenom;
+    $whatsappStatus = ['sent' => false, 'method' => 'immediate'];
+    $whatsappEnabled = false;
+    $whatsappMessage = '';
     
-    $codeQuery = "INSERT INTO verification_codes (
-        user_id, code, statut, expires_at, created_at
-    ) VALUES (
-        :user_id, :code, 'pending', :expires_at, NOW()
-    )";
+    // Vérifier si le fichier sendwhatsapp.php existe
+    $sendWhatsappPath = __DIR__ . '/../sendsms/sendwhatsapp.php';
     
-    $codeStmt = $bd->prepare($codeQuery);
-    $codeStmt->execute([
-        ':user_id' => $id_client,
-        ':code' => $verificationCode,
-        ':expires_at' => $expiresAt
-    ]);
+    if (file_exists($sendWhatsappPath)) {
+        require_once $sendWhatsappPath;
+        
+        // Vérifier si les variables WhatsApp sont définies
+        if (defined('WHATSAPP_TOKEN') && defined('WHATSAPP_PHONE_NUMBER_ID') && 
+            !empty(WHATSAPP_TOKEN) && !empty(WHATSAPP_PHONE_NUMBER_ID)) {
+            
+            $env = [
+                'WHATSAPP_TOKEN' => WHATSAPP_TOKEN,
+                'WHATSAPP_PHONE_NUMBER_ID' => WHATSAPP_PHONE_NUMBER_ID
+            ];
+            
+            // Préparer le message
+            $message = "Votre code de vérification Salacoop est : *{$verificationCode}*\n\n";
+            $message .= "Utilisez ce code pour activer votre compte.\n";
+            $message .= "⚠️ Ce code expire dans 30 minutes.\n";
+            $message .= "🔒 Ne partagez jamais ce code.\n\n";
+            $message .= "Merci,\nL'équipe Salacoop";
+            
+            try {
+                // Envoyer immédiatement
+                $result = sendWhatsAppMessage($name, $telephoneClean, $message, $env);
+                
+                if ($result['success'] ?? false) {
+                    $whatsappStatus = [
+                        'sent' => true,
+                        'method' => 'immediate',
+                        'message_id' => $result['message_id'] ?? null
+                    ];
+                    
+                    // CORRECTION : Requête UPDATE correcte avec SET
+                    $updateQuery = "UPDATE verification_codes 
+                                    SET statut = 'sent'
+                                    WHERE user_id = :client_id 
+                                    AND statut = 'pending'
+                                    AND expires_at > NOW()";
+                    
+                    $updateStmt = $bd->prepare($updateQuery);
+                    $updateStmt->execute(['client_id' => $clientId]);
+                    
+                    error_log("✅ WhatsApp envoyé immédiatement à {$telephoneClean}");
+                    $whatsappEnabled = true;
+                    $whatsappMessage = 'Un code de vérification vous a été envoyé par WhatsApp.';
+                } else {
+                    $whatsappStatus = [
+                        'sent' => false,
+                        'method' => 'immediate',
+                        'error' => $result['error'] ?? 'Erreur inconnue'
+                    ];
+                    error_log("❌ Échec envoi WhatsApp: " . json_encode($result));
+                    $whatsappMessage = 'Échec d\'envoi WhatsApp. Utilisez le lien manuel ci-dessous.';
+                }
+            } catch (Exception $e) {
+                error_log("❌ Exception lors de l'envoi WhatsApp: " . $e->getMessage());
+                $whatsappStatus['error'] = $e->getMessage();
+                $whatsappMessage = 'Erreur technique WhatsApp. Utilisez le lien manuel.';
+            }
+        } else {
+            error_log("⚠️ Configuration WhatsApp non définie dans config.php");
+            $whatsappStatus['error'] = 'Configuration WhatsApp manquante';
+            $whatsappMessage = 'WhatsApp non configuré. Contactez le support pour votre code.';
+        }
+    } else {
+        error_log("⚠️ Fichier sendwhatsapp.php non trouvé");
+        $whatsappStatus['error'] = 'Fichier sendwhatsapp.php non trouvé';
+        $whatsappMessage = 'Système WhatsApp indisponible. Contactez le support.';
+    }
+
+    // 7. Préparer le lien WhatsApp pour l'utilisateur (backup manuel)
+    $whatsappManualMessage = "Bonjour \nL'équipe Salacoop \n\n";
+    $whatsappManualMessage .= "Je souhaite m'inscrire sur l'application Salacoop\n\n";
+    $whatsappManualMessage .= "Mon numéro: {$telephoneClean}\n";
+    $whatsappManualMessage .= "Nom: {$name}\n\n";
+    $whatsappManualMessage .= "Veuillez m'envoyer mon code de double authentification.\n";
+    $whatsappManualMessage .= "Ne partagez ce code avec personne.\n\n";
+    $whatsappManualMessage .= "Merci,\nL'équipe Salacoop";
     
-    // ===================== PRÉPARER LE MESSAGE WHATSAPP DE DEMANDE =====================
-    $userName = trim($user['prenom']) . ' ' . trim($user['nom']);
-    $cleanPhone = preg_replace('/[^0-9]/', '', $telephone);
+    $yourWhatsAppNumber = "243962763130";
+    $whatsappUrl = "https://wa.me/" . $yourWhatsAppNumber . "?text=" . urlencode($whatsappManualMessage);
+
+    // 8. Démarrer la session
+    session_start();
+    session_regenerate_id(true);
     
-    // Message pour l'utilisateur (demande d'inscription)
-    $demandeMessage = "Bonjour {$userName},\n\n";
-    $demandeMessage .= "Vous avez demandé à vous inscrire sur l'application Salacoop.\n\n";
-    $demandeMessage .= "✅ Votre compte a été créé avec succès.\n";
-    $demandeMessage .= "📱 Vous recevrez votre code de vérification dans quelques instants.\n\n";
-    $demandeMessage .= "Merci,\nL'équipe Salacoop";
+    $_SESSION['client_id'] = $clientId;
+    $_SESSION['client_nom'] = $name;
+    $_SESSION['client_telephone'] = $telephoneClean;
+    $_SESSION['verification_code'] = $verificationCode;
+    $_SESSION['verification_expires'] = $expirationDate;
+    $_SESSION['whatsapp_sent'] = $whatsappStatus['sent'];
+
+    // 9. Valider la transaction
+    $bd->commit();
+
+    // 10. Préparer la réponse
+    $successMessage = 'Compte créé avec succès ! ';
     
-    $encodedDemande = urlencode($demandeMessage);
-    $whatsappDemandeUrl = "https://wa.me/{$cleanPhone}?text={$encodedDemande}";
+    if ($whatsappEnabled && $whatsappStatus['sent']) {
+        $successMessage .= 'Un code de vérification vous a été envoyé par WhatsApp.';
+    } else {
+        $successMessage .= 'Veuillez utiliser le lien WhatsApp ci-dessous pour recevoir votre code.';
+    }
     
-    // ===================== LANCER L'ENVOI DU CODE APRÈS 10 SECONDES =====================
-    // Données pour l'envoi différé du code
-    $whatsappData = [
-        'client_id' => $id_client,
-        'verification_code' => $verificationCode,
-        'phone' => $telephone,
-        'name' => $userName,
-        'delay_seconds' => 10
-    ];
-    
-    // URL du script d'envoi différé
-    $delayedUrl = 'http://' . $_SERVER['HTTP_HOST'] . '/backend/sendsms/delayed_sender.php';
-    
-    // Lancer l'envoi en arrière-plan sans attendre
-    $ch = curl_init($delayedUrl);
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => json_encode($whatsappData),
-        CURLOPT_HTTPHEADER => [
-            'Content-Type: application/json',
-            'Accept: application/json'
+    $response = [
+        'success' => true,
+        'message' => $successMessage,
+        'data' => [
+            'client_id' => $clientId,
+            'nom' => $nom,
+            'prenom' => $prenom,
+            'telephone' => $telephoneClean,
+            'verification_code' => $verificationCode, // À NE PAS AFFICHER EN PRODUCTION
+            'code_inserted' => $codeInserted,
+            'whatsapp_sent' => $whatsappStatus['sent'],
+            'whatsapp_enabled' => $whatsappEnabled
         ],
-        CURLOPT_RETURNTRANSFER => false,
-        CURLOPT_TIMEOUT => 1, // Timeout court pour ne pas bloquer
-        CURLOPT_CONNECTTIMEOUT => 1,
-        CURLOPT_FRESH_CONNECT => true,
-        CURLOPT_FORBID_REUSE => true,
-    ]);
-    
-    // Exécuter en arrière-plan (ignorer le résultat)
-    curl_exec($ch);
-    curl_close($ch);
-    
-    // ===================== PRÉPARER LA RÉPONSE POUR LE FRONTEND =====================
-    $redirectUrl = './double_authen.php?client=' . urlencode($id_client);
-    
-    // Démarrer la session pour stocker les informations
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-    
-    $_SESSION['client_id'] = $id_client;
-    $_SESSION['verification_pending'] = true;
-    $_SESSION['verification_started'] = time();
-    $_SESSION['user_name'] = $userName;
-    $_SESSION['user_phone'] = $telephone;
-    $_SESSION['whatsapp_scheduled'] = true;
-    $_SESSION['code_send_time'] = time() + 10; // Code envoyé dans 10 secondes
-    session_write_close();
-    
-    // ===================== RÉPONSE DE SUCCÈS =====================
-    $responseData = [
-        'message' => 'Compte créé avec succès !',
-        'client_id' => $id_client,
         'whatsapp' => [
-            'demande_url' => $whatsappDemandeUrl,
-            'demande_message' => 'Message de confirmation envoyé sur WhatsApp',
-            'code_message' => 'Votre code de vérification sera envoyé dans 10 secondes',
-            'code' => $verificationCode, // Pour debug seulement
-            'expires_at' => $expiresAt
+            'url' => $whatsappUrl,
+            'message' => $whatsappMessage,
+            'status' => $whatsappStatus,
+            'manual_required' => !$whatsappStatus['sent'],
+            'manual_message' => 'Cliquez pour ouvrir WhatsApp et envoyer le message pré-rempli'
         ],
-        'redirect' => $redirectUrl,
-        'verification' => [
-            'code_generated' => true,
-            'expires_in' => '30 minutes',
-            'delayed_send' => true,
-            'delay_seconds' => 10,
-            'status' => 'pending'
-        ],
-        'user_info' => [
-            'name' => $userName,
-            'phone' => $telephone
-        ],
-        'instructions' => [
-            'step1' => 'Un message de confirmation a été envoyé sur WhatsApp',
-            'step2' => 'Votre code de vérification arrivera dans 10 secondes',
-            'step3' => 'Utilisez ce code sur la page suivante'
-        ]
+        'redirect' => './double_authen.php'
     ];
-    
-    sendResponse(true, $responseData, 201);
-    
+
+    // Vider le buffer et envoyer la réponse JSON
+    ob_end_clean();
+    http_response_code(201);
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
+
 } catch (PDOException $e) {
-    error_log("❌ PDOException inscription_client.php: " . $e->getMessage());
+    // Annuler la transaction en cas d'erreur
+    if (isset($bd) && $bd->inTransaction()) {
+        try {
+            $bd->rollBack();
+        } catch (Exception $rollbackError) {
+            error_log("Erreur lors du rollback: " . $rollbackError->getMessage());
+        }
+    }
     
-    // Détails pour debug
-    $details = [
-        'error_code' => $e->getCode(),
-        'error_message' => $e->getMessage(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine()
-    ];
+    ob_end_clean();
+    error_log("PDOException inscription: " . $e->getMessage());
+    error_log("PDOException trace: " . $e->getTraceAsString());
     
-    sendError('Erreur base de données', 500, $details);
+    // Message d'erreur utilisateur-friendly
+    $errorMessage = 'Erreur lors de la création du compte';
+    if (strpos($e->getMessage(), 'SQL syntax') !== false) {
+        $errorMessage = 'Erreur technique SQL. Notre équipe a été notifiée.';
+    } elseif (strpos($e->getMessage(), 'Column not found') !== false) {
+        $errorMessage = 'Erreur technique. Vérifiez la structure de la base de données.';
+    } elseif (strpos($e->getMessage(), 'SQLSTATE') !== false) {
+        $errorMessage = 'Erreur de base de données. Notre équipe technique a été notifiée.';
+    }
+    
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => $errorMessage,
+        'error' => $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE);
     
 } catch (Exception $e) {
-    error_log("❌ Exception inscription_client.php: " . $e->getMessage());
+    if (isset($bd) && $bd->inTransaction()) {
+        try {
+            $bd->rollBack();
+        } catch (Exception $rollbackError) {
+            error_log("Erreur lors du rollback: " . $rollbackError->getMessage());
+        }
+    }
     
-    $details = [
-        'error_message' => $e->getMessage(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine()
-    ];
+    ob_end_clean();
+    error_log("Exception inscription: " . $e->getMessage());
+    error_log("Exception trace: " . $e->getTraceAsString());
     
-    sendError('Erreur inattendue', 500, $details);
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Erreur lors de la création du compte',
+        'error' => $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE);
 }
-?>
+
+exit();
