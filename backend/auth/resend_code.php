@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Vérifier la session
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['client_id'])) {
     ob_end_clean();
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'Session expirée'], JSON_UNESCAPED_UNICODE);
@@ -70,12 +70,16 @@ try {
         exit();
     }
     
-    // 2. Générer un nouveau code
+    // 2. Récupérer le VRAI numéro de téléphone
+    $realPhone = $client['tel'];
+    $name = $client['nom'] . ' ' . $client['prenom'];
+    
+    // 3. Générer un nouveau code
     $newVerificationCode = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
     $hash_code = password_hash($newVerificationCode, PASSWORD_DEFAULT);
     $expirationDate = date('Y-m-d H:i:s', strtotime('+30 minutes'));
     
-    // 3. Désactiver les anciens codes
+    // 4. Désactiver les anciens codes
     $disableOldCodesQuery = "UPDATE verification_codes 
                             SET statut = 'expired'
                             WHERE user_id = :client_id 
@@ -84,7 +88,7 @@ try {
     $disableOldCodesStmt = $bd->prepare($disableOldCodesQuery);
     $disableOldCodesStmt->execute(['client_id' => $clientId]);
     
-    // 4. Insérer le nouveau code
+    // 5. Insérer le nouveau code
     $insertCodeQuery = "INSERT INTO verification_codes (user_id, code, expires_at, statut) 
                        VALUES (:user_id, :code, :expires_at, 'pending')";
     
@@ -99,14 +103,13 @@ try {
         throw new Exception("Échec de création du nouveau code");
     }
     
-    // 5. Mettre à jour la session
+    // 6. Mettre à jour la session
     $_SESSION['verification_code'] = $newVerificationCode;
     $_SESSION['verification_expires'] = $expirationDate;
     
-    // 6. Envoyer le code par WhatsApp (si configuré)
+    // 7. Envoyer le code par WhatsApp (si configuré)
     $whatsappSent = false;
-    $name = $client['nom'] . ' ' . $client['prenom'];
-    $phone = $client['tel'];
+    $whatsappError = null;
     
     $sendWhatsappPath = __DIR__ . '/../sendsms/sendwhatsapp.php';
     if (file_exists($sendWhatsappPath)) {
@@ -126,33 +129,42 @@ try {
             $message .= "🔒 Ne partagez jamais ce code.\n\n";
             $message .= "Merci,\nL'équipe Salacoop";
             
-            $result = sendWhatsAppMessage($name, $phone, $message, $env);
-            
-            if ($result['success'] ?? false) {
-                $whatsappSent = true;
-                $_SESSION['whatsapp_sent'] = true;
+            try {
+                $result = sendWhatsAppMessage($name, $realPhone, $message, $env);
                 
-                // Mettre à jour le statut du code
-                $updateCodeQuery = "UPDATE verification_codes 
-                                   SET statut = 'sent'
-                                   WHERE user_id = :client_id 
-                                   AND code = :code";
-                
-                $updateCodeStmt = $bd->prepare($updateCodeQuery);
-                $updateCodeStmt->execute([
-                    'client_id' => $clientId,
-                    'code' => $hash_code
-                ]);
+                if ($result['success'] ?? false) {
+                    $whatsappSent = true;
+                    $_SESSION['whatsapp_sent'] = true;
+                    
+                    // Mettre à jour le statut du code
+                    $updateCodeQuery = "UPDATE verification_codes 
+                                       SET statut = 'sent'
+                                       WHERE user_id = :client_id 
+                                       AND code = :code";
+                    
+                    $updateCodeStmt = $bd->prepare($updateCodeQuery);
+                    $updateCodeStmt->execute([
+                        'client_id' => $clientId,
+                        'code' => $hash_code
+                    ]);
+                } else {
+                    $whatsappError = $result['error'] ?? 'Erreur inconnue';
+                }
+            } catch (Exception $e) {
+                $whatsappError = $e->getMessage();
+                error_log("Erreur WhatsApp: " . $whatsappError);
             }
         }
     }
     
-    // 7. Préparer la réponse
+    // 8. Préparer la réponse
     $response = [
         'success' => true,
         'message' => 'Nouveau code généré' . ($whatsappSent ? ' et envoyé par WhatsApp' : ''),
         'new_expiry' => $expirationDate,
-        'whatsapp_sent' => $whatsappSent
+        'whatsapp_sent' => $whatsappSent,
+        'phone_used' => $realPhone, // Pour debug
+        'whatsapp_error' => $whatsappError
     ];
     
     ob_end_clean();
