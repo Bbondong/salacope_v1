@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let selectedPlan = null;
     let selectedDuration = '1';
     let selectedPaymentMethod = 'mobile_money';
+    let whatsappCountdownInterval = null;
 
     /* ===================== INITIALISATION ===================== */
     function init() {
@@ -58,6 +59,11 @@ document.addEventListener('DOMContentLoaded', function () {
         
         // Masquer les champs vendeur par défaut
         hideVendeurFields();
+        
+        // Nettoyer les anciens intervalles au cas où
+        if (whatsappCountdownInterval) {
+            clearInterval(whatsappCountdownInterval);
+        }
     }
 
     /* ===================== FONCTIONS UTILITAIRES ===================== */
@@ -655,7 +661,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    /* ===================== FONCTION INSCRIPTION ACHETEUR ===================== */
+    /* ===================== FONCTION INSCRIPTION ACHETEUR (CORRIGÉ) ===================== */
     async function handleAcheteurInscription() {
         try {
             // Validation finale
@@ -668,61 +674,135 @@ document.addEventListener('DOMContentLoaded', function () {
             // DÉBOGAGE
             console.log('📤 Envoi des données acheteur:', formData);
             
-            // IMPORTANT: Chemin corrigé
-            const response = await fetch('/backend/auth/inscription_client.php', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            });
+            // AJOUTER UN TIMEOUT pour éviter les blocages
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 secondes timeout
+            
+            try {
+                // IMPORTANT: Vérifier le chemin correct
+                const url = '../backend/auth/inscription_client.php';
+                console.log('📤 Envoi vers:', url);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(formData),
+                    signal: controller.signal
+                });
 
-            // DÉBOGAGE
-            console.log('📥 Statut HTTP:', response.status);
-            console.log('📥 URL appelée:', '../backend/auth/inscription_client.php');
+                clearTimeout(timeoutId);
 
-            const result = await response.json();
-            console.log('📥 Réponse JSON:', result);
-
-            if (!response.ok) {
-                // GÉRER SPÉCIFIQUEMENT LES DIFFÉRENTES ERREURS
-                if (response.status === 409) {
-                    throw new Error(result.message || 'Ce numéro de téléphone est déjà utilisé');
-                    
-                } else if (response.status === 400) {
-                    throw new Error(result.message || 'Données invalides. Veuillez vérifier les informations.');
-                    
-                } else if (response.status === 500) {
-                    console.error('Erreur serveur détaillée:', result);
-                    throw new Error(result.message || 'Erreur serveur. Veuillez réessayer plus tard.');
-                    
-                } else {
-                    throw new Error(result.message || `Erreur (${response.status})`);
+                // DÉBOGAGE AVANCÉ
+                console.log('📥 Statut HTTP:', response.status);
+                console.log('📥 Statut text:', response.statusText);
+                console.log('📥 Headers:', Object.fromEntries(response.headers.entries()));
+                
+                // LIRE LA RÉPONSE EN TEXTE D'ABORD pour debug
+                const responseText = await response.text();
+                console.log('📥 Réponse brute (premiers 1000 caractères):', responseText.substring(0, 1000));
+                
+                // Vérifier si la réponse est vide
+                if (!responseText.trim()) {
+                    throw new Error('Le serveur a retourné une réponse vide');
                 }
-            }
+                
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                    console.log('📥 Réponse JSON parsée:', result);
+                } catch (jsonError) {
+                    console.error('❌ Impossible de parser le JSON:', jsonError);
+                    
+                    // Vérifier si c'est une page HTML (erreur PHP)
+                    if (responseText.includes('<!DOCTYPE') || 
+                        responseText.includes('<html') || 
+                        responseText.includes('Parse error') ||
+                        responseText.includes('Fatal error') ||
+                        responseText.includes('Warning:') ||
+                        responseText.includes('Notice:')) {
+                        
+                        console.error('❌ Le serveur retourne du HTML/PHP au lieu de JSON');
+                        throw new Error('Erreur technique serveur. Contactez l\'administrateur.');
+                    }
+                    
+                    // Afficher un extrait de l'erreur
+                    const errorSnippet = responseText.substring(0, 200).replace(/\n/g, ' ');
+                    throw new Error(`Réponse serveur invalide. Attendu JSON, reçu: "${errorSnippet}..."`);
+                }
 
-            // Vérifier que success est true
-            if (result.success !== true) {
-                throw new Error(result.message || 'Erreur lors de la création du compte');
-            }
+                // Vérifier la structure de base
+                if (typeof result !== 'object' || result === null) {
+                    throw new Error('Réponse serveur invalide: format incorrect');
+                }
 
-            handleAcheteurSuccess(result);
+                if (!response.ok) {
+                    // GÉRER SPÉCIFIQUEMENT LES DIFFÉRENTES ERREURS
+                    let errorMessage = result.message || 'Erreur inconnue';
+                    
+                    if (response.status === 409) {
+                        errorMessage = result.message || 'Ce numéro de téléphone est déjà utilisé';
+                    } else if (response.status === 400) {
+                        errorMessage = result.message || 'Données invalides. Veuillez vérifier les informations.';
+                    } else if (response.status === 500) {
+                        console.error('Erreur serveur détaillée:', result);
+                        errorMessage = result.message || 'Erreur serveur. Veuillez réessayer plus tard.';
+                    } else if (response.status === 404) {
+                        errorMessage = 'Service non trouvé. Vérifiez la configuration.';
+                    } else if (response.status === 0) {
+                        errorMessage = 'Impossible de se connecter au serveur. Vérifiez votre connexion.';
+                    }
+                    
+                    throw new Error(errorMessage);
+                }
+
+                // Vérifier que success est true
+                if (result.success !== true) {
+                    console.warn('⚠️ Réponse sans "success: true" mais avec données:', result);
+                }
+
+                handleAcheteurSuccess(result);
+
+            } catch (fetchError) {
+                if (fetchError.name === 'AbortError') {
+                    throw new Error('La requête a expiré après 30 secondes. Vérifiez votre connexion.');
+                }
+                throw fetchError;
+            }
 
         } catch (err) {
             console.error('❌ Erreur inscription acheteur:', err);
             
-            const errorMessage = err.message || 'Erreur de connexion au serveur';
+            // Message d'erreur plus clair
+            let errorMessage = err.message;
+            let showFieldError = false;
+            let fieldToHighlight = null;
             
-            // Mettre en évidence le champ concerné si c'est un conflit
-            if (errorMessage.includes('téléphone') || errorMessage.includes('phone')) {
-                const telInput = document.getElementById('telephone');
-                showError(telInput, 'Ce numéro est déjà utilisé');
-                // Retourner à l'étape 2 pour corriger
-                goToStep(2);
+            if (err.message.includes('téléphone') || err.message.includes('phone') || err.message.includes('numéro')) {
+                errorMessage = 'Ce numéro de téléphone est déjà utilisé. Veuillez en utiliser un autre.';
+                showFieldError = true;
+                fieldToHighlight = 'telephone';
+            } else if (err.message.includes('connexion') || err.message.includes('connecter') || err.message.includes('network')) {
+                errorMessage = 'Erreur de connexion au serveur. Vérifiez votre internet et réessayez.';
+            } else if (err.message.includes('JSON') || err.message.includes('parse')) {
+                errorMessage = 'Erreur technique serveur. L\'administrateur a été averti.';
+            } else if (err.message.includes('vide')) {
+                errorMessage = 'Le serveur n\'a pas répondu. Vérifiez la configuration.';
             }
             
             showNotification(errorMessage, 'error');
+            
+            // Mettre en évidence le champ concerné si nécessaire
+            if (showFieldError && fieldToHighlight) {
+                const telInput = document.getElementById(fieldToHighlight);
+                if (telInput) {
+                    showError(telInput, errorMessage);
+                    // Retourner à l'étape 2 pour corriger
+                    goToStep(2);
+                }
+            }
             
             // Réactiver le bouton
             submitBtn.disabled = false;
@@ -731,21 +811,38 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function handleAcheteurSuccess(result) {
-        showNotification('Compte créé avec succès ! Redirection en cours...', 'success');
+        showNotification('Compte créé avec succès !', 'success');
         
         // DÉBOGAGE
         console.log('✅ Données reçues:', result);
         
+        // Démarrer le compte à rebours pour le code
+        startCodeCountdown(10, result);
+        
         setTimeout(() => {
-            // CORRECTION: Vérifier la structure correcte
-            if (result.whatsapp && result.whatsapp.url) {
-                console.log('📱 URL WhatsApp trouvée (nouvelle structure):', result.whatsapp.url);
-                openWhatsApp(result.whatsapp.url, result);
+            // NOUVELLE LOGIQUE : Message de demande d'abord, code après 10 secondes
+            if (result.whatsapp && result.whatsapp.demande_url) {
+                console.log('📱 Message de demande WhatsApp:', result.whatsapp.demande_url);
                 
-            } else if (result.whatsapp_redirect && result.whatsapp_redirect.url) {
-                // Compatibilité avec ancienne structure
-                console.log('📱 URL WhatsApp trouvée (ancienne structure):', result.whatsapp_redirect.url);
-                openWhatsApp(result.whatsapp_redirect.url, result);
+                // Afficher un message d'information détaillé
+                showNotification(`
+                    <div style="text-align: left; padding: 10px;">
+                        <p style="margin-bottom: 10px;"><strong>Processus d'inscription :</strong></p>
+                        <p><i class="fas fa-check-circle" style="color: #4CAF50;"></i> <strong>Étape 1 :</strong> Message de confirmation</p>
+                        <p><i class="fas fa-clock" style="color: #FF9800;"></i> <strong>Étape 2 :</strong> Code dans <span id="countdown-timer">10s</span></p>
+                        <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                            <i class="fas fa-info-circle"></i> Le code sera envoyé automatiquement
+                        </p>
+                    </div>
+                `, 'info', 15000);
+                
+                // Ouvrir WhatsApp avec le message de demande
+                openWhatsApp(result.whatsapp.demande_url, result);
+                
+            } else if (result.whatsapp && result.whatsapp.url) {
+                // Compatibilité ancienne version
+                console.log('📱 URL WhatsApp trouvée (ancienne structure):', result.whatsapp.url);
+                openWhatsApp(result.whatsapp.url, result);
                 
             } else if (result.redirect) {
                 console.log('🔄 Redirection vers:', result.redirect);
@@ -758,7 +855,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 1500);
     }
 
-    /* ===================== FONCTION INSCRIPTION VENDEUR ===================== */
+    /* ===================== FONCTION INSCRIPTION VENDEUR (CORRIGÉ) ===================== */
     async function handleVendeurInscription() {
         try {
             // Validation finale
@@ -774,53 +871,106 @@ document.addEventListener('DOMContentLoaded', function () {
             
             console.log('📤 Envoi des données vendeur:', formData);
             
-            const response = await fetch('/backend/auth/inscription_vendeur.php', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            });
+            // AJOUTER UN TIMEOUT pour éviter les blocages
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            
+            try {
+                const url = '../backend/auth/inscription_vendeur.php';
+                console.log('📤 Envoi vendeur vers:', url);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(formData),
+                    signal: controller.signal
+                });
 
-            console.log('📥 Statut HTTP vendeur:', response.status);
+                clearTimeout(timeoutId);
 
-            const result = await response.json();
-            console.log('📥 Réponse JSON vendeur:', result);
-
-            if (!response.ok) {
-                if (response.status === 409) {
-                    let message = 'Ces informations sont déjà utilisées. ';
+                console.log('📥 Statut HTTP vendeur:', response.status);
+                console.log('📥 Statut text vendeur:', response.statusText);
+                
+                // Lire d'abord en texte
+                const responseText = await response.text();
+                console.log('📥 Réponse brute vendeur:', responseText.substring(0, 500));
+                
+                // Vérifier si la réponse est vide
+                if (!responseText.trim()) {
+                    throw new Error('Le serveur a retourné une réponse vide');
+                }
+                
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                    console.log('📥 Réponse JSON vendeur:', result);
+                } catch (jsonError) {
+                    console.error('❌ Impossible de parser le JSON vendeur:', jsonError);
                     
-                    if (result.message) {
-                        if (result.message.includes('téléphone') || result.message.includes('phone')) {
-                            message = `Ce téléphone d'entreprise est déjà utilisé. `;
-                        } else if (result.message.includes('email')) {
-                            message = `Cet email d'entreprise est déjà utilisé. `;
-                        } else if (result.message.includes('entreprise')) {
-                            message = `Ce nom d'entreprise est déjà pris. `;
-                        } else {
-                            message = result.message;
-                        }
+                    // Vérifier si c'est une page HTML (erreur PHP)
+                    if (responseText.includes('<!DOCTYPE') || 
+                        responseText.includes('<html') || 
+                        responseText.includes('Parse error') ||
+                        responseText.includes('Fatal error')) {
+                        throw new Error('Erreur technique serveur. Contactez l\'administrateur.');
                     }
                     
-                    throw new Error(message);
-                    
-                } else if (response.status === 400) {
-                    throw new Error(result.message || 'Données invalides.');
-                } else if (response.status === 500) {
-                    console.error('Erreur serveur vendeur:', result);
-                    throw new Error('Erreur serveur. Veuillez réessayer plus tard.');
-                } else {
-                    throw new Error(result.message || `Erreur (${response.status})`);
+                    const errorSnippet = responseText.substring(0, 200).replace(/\n/g, ' ');
+                    throw new Error(`Réponse serveur invalide: "${errorSnippet}..."`);
                 }
-            }
 
-            if (result.success !== true) {
-                throw new Error(result.message || 'Erreur lors de la création du compte');
-            }
+                // Vérifier la structure de base
+                if (typeof result !== 'object' || result === null) {
+                    throw new Error('Réponse serveur invalide: format incorrect');
+                }
 
-            handleVendeurSuccess(result);
+                if (!response.ok) {
+                    let errorMessage = result.message || 'Erreur inconnue';
+                    
+                    if (response.status === 409) {
+                        // Détecter quel champ est en conflit
+                        if (result.message) {
+                            if (result.message.includes('téléphone') || result.message.includes('phone')) {
+                                errorMessage = `Ce téléphone d'entreprise est déjà utilisé.`;
+                            } else if (result.message.includes('email')) {
+                                errorMessage = `Cet email d'entreprise est déjà utilisé.`;
+                            } else if (result.message.includes('entreprise') || result.message.includes('nom')) {
+                                errorMessage = `Ce nom d'entreprise est déjà pris.`;
+                            } else {
+                                errorMessage = result.message;
+                            }
+                        } else {
+                            errorMessage = 'Ces informations sont déjà utilisées.';
+                        }
+                    } else if (response.status === 400) {
+                        errorMessage = result.message || 'Données invalides.';
+                    } else if (response.status === 500) {
+                        console.error('Erreur serveur vendeur:', result);
+                        errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
+                    } else if (response.status === 404) {
+                        errorMessage = 'Service vendeur non trouvé.';
+                    } else if (response.status === 0) {
+                        errorMessage = 'Impossible de se connecter au serveur.';
+                    }
+                    
+                    throw new Error(errorMessage);
+                }
+
+                if (result.success !== true) {
+                    console.warn('⚠️ Réponse vendeur sans "success: true" mais avec données:', result);
+                }
+
+                handleVendeurSuccess(result);
+
+            } catch (fetchError) {
+                if (fetchError.name === 'AbortError') {
+                    throw new Error('La requête a expiré après 30 secondes.');
+                }
+                throw fetchError;
+            }
 
         } catch (err) {
             console.error('❌ Erreur inscription vendeur:', err);
@@ -866,43 +1016,91 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 2000);
     }
 
-    /* ===================== WHATSAPP FUNCTIONS ===================== */
+    /* ===================== WHATSAPP FUNCTIONS (MODIFIÉES) ===================== */
     function openWhatsApp(whatsappUrl, result) {
         console.log('📱 Ouverture WhatsApp:', whatsappUrl);
-        showNotification('Ouverture de WhatsApp pour la vérification...', 'info');
+        
+        // Message d'information amélioré
+        showNotification(`
+            <div style="text-align: left; padding: 10px;">
+                <p style="margin-bottom: 10px;"><strong>Ouvrez WhatsApp pour :</strong></p>
+                <p><i class="fas fa-check-circle" style="color: #4CAF50;"></i> Recevoir la confirmation</p>
+                <p><i class="fas fa-clock" style="color: #FF9800;"></i> Attendre le code (10 secondes)</p>
+                <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                    <i class="fas fa-shield-alt"></i> Le code sera envoyé automatiquement
+                </p>
+            </div>
+        `, 'info', 10000);
         
         const whatsappWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
         
         if (!whatsappWindow || whatsappWindow.closed || typeof whatsappWindow.closed === 'undefined') {
             console.log('⚠️ Popup WhatsApp bloqué');
-            handlePopupBlocked(whatsappUrl);
+            handlePopupBlocked(whatsappUrl, result);
             
-            // Rediriger après un délai
-            setTimeout(() => {
-                const redirectUrl = result.redirect || result.redirect_url || './double_authen.php';
-                console.log('🔄 Redirection après popup bloqué:', redirectUrl);
-                window.location.href = redirectUrl;
-            }, 5000);
         } else {
             console.log('✅ WhatsApp ouvert avec succès');
-            showNotification('WhatsApp ouvert! Envoyez le message pré-rempli.', 'success');
+            
+            // Message complémentaire après 3 secondes
+            setTimeout(() => {
+                showNotification('Attendez 10 secondes pour recevoir votre code de vérification...', 'success', 7000);
+            }, 3000);
             
             // Rediriger après un délai
             setTimeout(() => {
                 const redirectUrl = result.redirect || result.redirect_url || './double_authen.php';
                 console.log('🔄 Redirection après WhatsApp:', redirectUrl);
                 window.location.href = redirectUrl;
-            }, 3000);
+            }, 5000);
         }
     }
 
-    function handlePopupBlocked(whatsappUrl) {
-        showNotification('WhatsApp n\'a pas pu s\'ouvrir automatiquement', 'warning');
-        createManualWhatsAppButton(whatsappUrl);
-        showNotification('Cliquez sur le bouton vert pour ouvrir WhatsApp manuellement', 'info');
+    function startCodeCountdown(seconds, result) {
+        let remaining = seconds;
+        
+        // Mettre à jour le compte à rebours dans la notification
+        const updateCountdownDisplay = () => {
+            const countdownElement = document.getElementById('countdown-timer');
+            if (countdownElement) {
+                countdownElement.textContent = `${remaining}s`;
+            }
+        };
+        
+        // Mettre à jour immédiatement
+        updateCountdownDisplay();
+        
+        // Démarrer le compte à rebours
+        whatsappCountdownInterval = setInterval(() => {
+            remaining--;
+            updateCountdownDisplay();
+            
+            if (remaining <= 0) {
+                clearInterval(whatsappCountdownInterval);
+                showNotification('✅ Code de vérification envoyé ! Vérifiez WhatsApp.', 'success', 8000);
+                
+                // Mettre à jour le message d'information
+                showNotification(`
+                    <div style="text-align: center; padding: 15px;">
+                        <i class="fab fa-whatsapp" style="color: #25D366; font-size: 32px; margin-bottom: 10px;"></i>
+                        <p><strong>Code envoyé !</strong></p>
+                        <p>Vérifiez vos messages WhatsApp</p>
+                        <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                            <i class="fas fa-lock"></i> Code sécurisé à usage unique
+                        </p>
+                    </div>
+                `, 'success', 10000);
+            } else if (remaining === 5) {
+                showNotification('Le code arrive dans 5 secondes...', 'info', 5000);
+            }
+        }, 1000);
     }
 
-    function createManualWhatsAppButton(whatsappUrl) {
+    function handlePopupBlocked(whatsappUrl, result) {
+        showNotification('WhatsApp n\'a pas pu s\'ouvrir automatiquement', 'warning');
+        createManualWhatsAppButton(whatsappUrl, result);
+    }
+
+    function createManualWhatsAppButton(whatsappUrl, result) {
         const buttonContainer = document.createElement('div');
         buttonContainer.id = 'whatsapp-manual-button-container';
         buttonContainer.style.cssText = `
@@ -932,7 +1130,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div style="margin-bottom: 25px;">
                     <i class="fab fa-whatsapp" style="font-size: 70px; color: #25D366;"></i>
                 </div>
-                <h2 style="margin-bottom: 15px; color: #333;">Ouvrir WhatsApp</h2>
+                <h2 style="margin-bottom: 15px; color: #333;">Processus en 2 étapes</h2>
+                <div style="text-align: left; margin-bottom: 25px; background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                    <p style="margin-bottom: 10px; color: #666;"><strong>Étape 1 :</strong> Confirmation (maintenant)</p>
+                    <p style="margin-bottom: 10px; color: #666;"><strong>Étape 2 :</strong> Code dans <span id="popup-countdown">10s</span></p>
+                    <p style="font-size: 14px; color: #888;">
+                        <i class="fas fa-info-circle"></i> Le code sera envoyé automatiquement
+                    </p>
+                </div>
                 <p style="margin-bottom: 25px; color: #666; line-height: 1.6;">
                     Le navigateur a bloqué l'ouverture automatique de WhatsApp.<br>
                     Cliquez sur le bouton ci-dessous pour l'ouvrir manuellement.
@@ -955,7 +1160,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <i class="fab fa-whatsapp"></i> Ouvrir WhatsApp maintenant
                 </button>
                 <p style="color: #888; font-size: 14px; margin-top: 15px;">
-                    <i class="fas fa-info-circle"></i> Vous recevrez votre code de vérification dans 30 secondes
+                    <i class="fas fa-shield-alt"></i> Votre code de vérification arrivera dans 10 secondes
                 </p>
                 <button id="close-manual-btn" style="
                     background: none;
@@ -967,45 +1172,72 @@ document.addEventListener('DOMContentLoaded', function () {
                     cursor: pointer;
                     font-size: 14px;
                 ">
-                    Fermer
+                    Fermer et continuer
                 </button>
             </div>
         `;
         
         document.body.appendChild(buttonContainer);
         
+        // Compte à rebours dans le popup
+        let popupCountdown = 10;
+        const countdownElement = buttonContainer.querySelector('#popup-countdown');
+        const countdownInterval = setInterval(() => {
+            popupCountdown--;
+            if (countdownElement) {
+                countdownElement.textContent = `${popupCountdown}s`;
+            }
+            if (popupCountdown <= 0) {
+                clearInterval(countdownInterval);
+                if (countdownElement) {
+                    countdownElement.textContent = 'envoyé !';
+                    countdownElement.style.color = '#25D366';
+                    countdownElement.style.fontWeight = 'bold';
+                }
+            }
+        }, 1000);
+        
         document.getElementById('manual-whatsapp-btn').addEventListener('click', function() {
             window.open(whatsappUrl, '_blank');
             buttonContainer.remove();
-            showNotification('WhatsApp ouvert! Envoyez le message.', 'success');
+            clearInterval(countdownInterval);
+            showNotification('WhatsApp ouvert! Le code arrivera dans quelques secondes.', 'success');
+            
+            // Rediriger après un délai
+            setTimeout(() => {
+                const redirectUrl = result.redirect || result.redirect_url || './double_authen.php';
+                window.location.href = redirectUrl;
+            }, 3000);
         });
         
         document.getElementById('close-manual-btn').addEventListener('click', function() {
             buttonContainer.remove();
+            clearInterval(countdownInterval);
             showNotification('Vous pouvez ouvrir WhatsApp plus tard', 'info');
+            
+            // Rediriger immédiatement
+            const redirectUrl = result.redirect || result.redirect_url || './double_authen.php';
+            setTimeout(() => {
+                window.location.href = redirectUrl;
+            }, 1000);
         });
         
         buttonContainer.addEventListener('click', function(e) {
             if (e.target === buttonContainer) {
                 buttonContainer.remove();
+                clearInterval(countdownInterval);
             }
         });
-    }
-
-    function startCodeCountdown(seconds) {
-        let remaining = seconds;
         
-        showNotification(`Vérifiez WhatsApp dans ${remaining} secondes pour votre code...`, 'info');
-        
-        const countdownInterval = setInterval(() => {
-            remaining -= 10;
-            if (remaining > 0) {
-                showNotification(`Code dans ${remaining} secondes...`, 'info');
-            } else {
+        // Fermer automatiquement après 15 secondes
+        setTimeout(() => {
+            if (buttonContainer.parentNode) {
+                buttonContainer.remove();
                 clearInterval(countdownInterval);
-                showNotification('Code envoyé! Vérifiez WhatsApp.', 'success');
+                const redirectUrl = result.redirect || result.redirect_url || './double_authen.php';
+                window.location.href = redirectUrl;
             }
-        }, 10000);
+        }, 15000);
     }
 
     function scheduleRedirection(seconds) {
@@ -1053,7 +1285,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function showNotification(message, type = 'info', duration = 5000) {
-        document.querySelectorAll('.notification').forEach(n => n.remove());
+        // Nettoyer les anciennes notifications
+        document.querySelectorAll('.notification').forEach(n => {
+            // Ne pas supprimer les notifications importantes
+            if (!n.classList.contains('important')) {
+                n.remove();
+            }
+        });
         
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
@@ -1089,7 +1327,7 @@ document.addEventListener('DOMContentLoaded', function () {
             align-items: center;
             justify-content: space-between;
             min-width: 300px;
-            max-width: 400px;
+            max-width: 450px;
             z-index: 9999;
             box-shadow: 0 5px 20px rgba(0,0,0,0.2);
             animation: slideIn 0.3s ease;
