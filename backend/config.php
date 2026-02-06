@@ -87,24 +87,3 @@ if (!defined('APP_DEBUG')) {
     define('APP_DEBUG', ($env['APP_DEBUG'] ?? 'false') === 'true');
 }
 ?>
-// Ajoutez à la fin de votre config.php
-if (!function_exists('async_http_request')) {
-    function async_http_request($url, $data = []) {
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => false,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($data),
-            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-            CURLOPT_TIMEOUT => 1,
-            CURLOPT_CONNECTTIMEOUT => 1,
-        ]);
-        
-        $result = curl_exec($ch);
-        $error = curl_error($ch);
-        curl_close($ch);
-        
-        return ['success' => empty($error), 'error' => $error];
-    }
-}

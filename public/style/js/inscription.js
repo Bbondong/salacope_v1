@@ -725,6 +725,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         responseText.includes('Notice:')) {
                         
                         console.error('❌ Le serveur retourne du HTML/PHP au lieu de JSON');
+                        console.error('📄 Contenu HTML/PHP reçu:', responseText);
                         throw new Error('Erreur technique serveur. Contactez l\'administrateur.');
                     }
                     

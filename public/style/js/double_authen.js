@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Rediriger si pas de session
                     showNotification('Session expirée. Veuillez vous réinscrire.', 'error');
                     setTimeout(() => {
-                        window.location.href = './index.php';
+                        window.location.href = './login.php';
                     }, 3000);
                 }
             } else {
