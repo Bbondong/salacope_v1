@@ -1,22 +1,30 @@
 <?php
-// backend/sendsms/delayed_sender.php
+// backend/sendsms/delayed_send.php
 
-// Ce fichier reçoit la demande et lance l'envoi différé
+// Ce script s'exécute en différé pour envoyer le code WhatsApp
 
-// Attendre 10 secondes (le délai invisible)
+// Attendre 10 secondes (simuler le délai)
 sleep(10);
 
-// Démarrer l'envoi réel
-require_once __DIR__ . '/sendwhatsapp.php';
+// Charger la configuration
 require_once __DIR__ . '/../config.php';
 
-// Récupérer les données POST
+// Vérifier si le fichier sendwhatsapp.php existe
+$sendWhatsappPath = __DIR__ . '/sendwhatsapp.php';
+if (!file_exists($sendWhatsappPath)) {
+    error_log("❌ Fichier sendwhatsapp.php non trouvé");
+    exit(1);
+}
+
+require_once $sendWhatsappPath;
+
+// Lire les paramètres POST
 $inputJSON = file_get_contents('php://input');
 $input = json_decode($inputJSON, true);
 
 if (!$input) {
-    error_log("❌ delayed_sender: Données JSON invalides");
-    exit();
+    error_log("❌ Données invalides pour delayed_send");
+    exit(1);
 }
 
 $clientId = $input['client_id'] ?? null;
@@ -25,8 +33,8 @@ $phone = $input['phone'] ?? null;
 $name = $input['name'] ?? null;
 
 if (!$clientId || !$verificationCode || !$phone || !$name) {
-    error_log("❌ delayed_sender: Paramètres manquants");
-    exit();
+    error_log("❌ Paramètres manquants pour delayed_send");
+    exit(1);
 }
 
 try {
@@ -34,15 +42,15 @@ try {
     if (!isset($bd) || !($bd instanceof PDO)) {
         throw new Exception("Connexion à la base de données non établie");
     }
-    
+
     // Vérifier si le client existe et n'est pas encore vérifié
     $checkQuery = "SELECT id_client, statut FROM client WHERE id_client = :client_id AND statut = 'new'";
     $checkStmt = $bd->prepare($checkQuery);
     $checkStmt->execute(['client_id' => $clientId]);
     
     if ($checkStmt->rowCount() === 0) {
-        error_log("⚠️ delayed_sender: Client {$clientId} déjà vérifié ou non trouvé");
-        exit();
+        error_log("⚠️ Client {$clientId} déjà vérifié ou non trouvé");
+        exit(0);
     }
     
     // Vérifier si le code est toujours valide
@@ -52,18 +60,19 @@ try {
                        AND expires_at > NOW()";
     
     $codeCheckStmt = $bd->prepare($codeCheckQuery);
+    $hashCode = password_hash($verificationCode, PASSWORD_DEFAULT);
     $codeCheckStmt->execute(['client_id' => $clientId]);
     
     if ($codeCheckStmt->rowCount() === 0) {
-        error_log("❌ delayed_sender: Code non trouvé ou expiré pour client {$clientId}");
-        exit();
+        error_log("❌ Code non trouvé ou expiré pour client {$clientId}");
+        exit(0);
     }
     
     // Vérifier si WhatsApp est configuré
     if (!defined('WHATSAPP_TOKEN') || !defined('WHATSAPP_PHONE_NUMBER_ID') ||
         empty(WHATSAPP_TOKEN) || empty(WHATSAPP_PHONE_NUMBER_ID)) {
-        error_log("⚠️ delayed_sender: Configuration WhatsApp manquante");
-        exit();
+        error_log("⚠️ Configuration WhatsApp manquante");
+        exit(1);
     }
     
     // Configuration WhatsApp
@@ -79,12 +88,12 @@ try {
     $message .= "🔒 Ne partagez jamais ce code.\n\n";
     $message .= "Merci,\nL'équipe Salacoop";
     
-    error_log("📤 delayed_sender: Envoi WhatsApp après délai pour client {$clientId} ({$phone})");
+    error_log("📤 Envoi WhatsApp différé pour client {$clientId} ({$phone})");
     
     // Envoyer le message WhatsApp
     $result = sendWhatsAppMessage($name, $phone, $message, $env);
     
-    if ($result['success'] ?? false) {
+    if ($result['success']) {
         // Mettre à jour le statut dans verification_codes
         $updateQuery = "UPDATE verification_codes 
                         SET statut = 'sent'
@@ -95,31 +104,36 @@ try {
         $updateStmt = $bd->prepare($updateQuery);
         $updateResult = $updateStmt->execute(['client_id' => $clientId]);
         
-        if ($updateResult) {
-            error_log("✅ delayed_sender: WhatsApp envoyé avec succès à {$phone}");
-            
-            // Mettre à jour la session si elle existe
-            session_start();
-            if (isset($_SESSION['client_id']) && $_SESSION['client_id'] == $clientId) {
-                $_SESSION['whatsapp_sent'] = true;
-                $_SESSION['whatsapp_sent_time'] = time();
+        error_log("✅ WhatsApp envoyé avec succès à {$phone} (après délai)");
+        
+        // Envoyer notification au support (optionnel)
+        if (defined('WHATSAPP_SUPPORT_PHONE') && !empty(WHATSAPP_SUPPORT_PHONE)) {
+            try {
+                $supportMessage = "📱 Code envoyé après délai\n\n";
+                $supportMessage .= "Client: {$name}\n";
+                $supportMessage .= "Téléphone: {$phone}\n";
+                $supportMessage .= "Code: {$verificationCode}\n";
+                $supportMessage .= "Heure: " . date('H:i:s');
+                
+                $supportResult = sendWhatsAppMessage(
+                    "Support Salacoop", 
+                    WHATSAPP_SUPPORT_PHONE, 
+                    $supportMessage, 
+                    $env
+                );
+            } catch (Exception $e) {
+                error_log("⚠️ Erreur envoi support: " . $e->getMessage());
             }
-            session_write_close();
-            
-        } else {
-            error_log("⚠️ delayed_sender: WhatsApp envoyé mais erreur de mise à jour BD");
         }
         
     } else {
-        error_log("❌ delayed_sender: Échec envoi WhatsApp à {$phone}: " . json_encode($result));
+        error_log("❌ Échec envoi WhatsApp différé à {$phone}: " . json_encode($result));
     }
     
 } catch (Exception $e) {
-    error_log("💥 delayed_sender: Erreur: " . $e->getMessage());
+    error_log("💥 Erreur dans delayed_send.php: " . $e->getMessage());
+    exit(1);
 }
 
-// Répondre au serveur appelant (optionnel)
-http_response_code(200);
-header('Content-Type: application/json');
-echo json_encode(['success' => true, 'processed_at' => date('Y-m-d H:i:s')]);
+exit(0);
 ?>
