@@ -104,7 +104,7 @@ document.getElementById('contactBtn').addEventListener('click', async () => {
       alert('Veuillez vous connecter pour contacter le vendeur');
       
       // Sauvegarder l'URL de redirection
-      const chatUrl = `chat.php?seller=${currentProduct.seller_id}&product=${productId}&seller_type=${currentProduct.seller_type}`;
+      const chatUrl = `Chat.php?seller=${currentProduct.seller_id}&product=${productId}&seller_type=${currentProduct.seller_type}`;
       localStorage.setItem('redirect_after_login', chatUrl);
       
       window.location.href = `login.php?from=product&id=${productId}&redirect=${encodeURIComponent(chatUrl)}`;
@@ -127,7 +127,7 @@ document.getElementById('contactBtn').addEventListener('click', async () => {
     
     // Rediriger vers le chat
     window.location.href = 
-      `chat.php?seller=${currentProduct.seller_id}&product=${productId}&client=${clientId}&seller_type=${currentProduct.seller_type}`;
+      `Chat.php?seller=${currentProduct.seller_id}&product=${productId}&client=${clientId}&seller_type=${currentProduct.seller_type}`;
       
   } catch (error) {
     console.error('Erreur vérification connexion:', error);
