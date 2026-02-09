@@ -27,6 +27,12 @@ fetch(`/backend/clients/product_detail.php?id=${productId}`)
       p.delivery_available == 1
         ? `Livraison : ${p.delivery_cost} €`
         : 'Pas de livraison';
+    
+    // Afficher le type de vendeur
+    const sellerElement = document.getElementById('productSeller');
+    if (sellerElement) {
+        sellerElement.textContent = `Vendu par : ${p.seller_name}`;
+    }
   })
   .catch(() => {
     document.body.innerHTML = 'Erreur chargement produit';
@@ -51,6 +57,23 @@ document.getElementById('buyBtn').addEventListener('click', () => {
 document.getElementById('contactBtn').addEventListener('click', () => {
   if (!currentProduct) return;
 
-  window.location.href =
-    `chat.php?seller=${currentProduct.seller_id}&product=${currentProduct.product_id}`;
+  // Récupérer l'ID de l'utilisateur connecté
+  const clientId = localStorage.getItem('user_id') || sessionStorage.getItem('user_id');
+  
+  // Vérifier s'il est connecté
+  if (!clientId) {
+    alert('Veuillez vous connecter pour contacter le vendeur');
+    window.location.href = 'login.php?from=product&id=' + productId;
+    return;
+  }
+  
+  // Vérifier qu'il ne se contacte pas lui-même (si c'est un client)
+  if (currentProduct.seller_type === 'client' && parseInt(clientId) === parseInt(currentProduct.seller_id)) {
+    alert('Vous ne pouvez pas vous contacter vous-même');
+    return;
+  }
+  
+  // Rediriger vers le chat avec TOUS les paramètres
+  window.location.href = 
+    `chat.php?seller=${currentProduct.seller_id}&product=${productId}&client=${clientId}&seller_type=${currentProduct.seller_type}`;
 });

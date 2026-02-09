@@ -27,6 +27,7 @@ $sql = "
 SELECT
   p.product_id,
   p.seller_id,
+  p.seller_type,  -- Récupérer seulement le type
   p.title,
   p.description,
   p.price,
@@ -63,6 +64,10 @@ $product['stock_quantity'] = (int) $product['stock_quantity'];
 $product['delivery_available'] = (int) $product['delivery_available'];
 $product['delivery_cost'] = (float) $product['delivery_cost'];
 
+// NE PAS récupérer le nom du vendeur ici, on le fera dans le chat
+// Juste ajouter un texte générique
+$product['seller_name'] = $product['seller_type'] == 'admin' ? 'Administrateur' : 'Vendeur';
+
 /* ========= URL IMAGE ABSOLUE ========= */
 $baseUrl = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
          . '://' . $_SERVER['HTTP_HOST'];
@@ -71,3 +76,4 @@ $product['image_path'] = $baseUrl . '/' . ltrim($product['image_path'], '/');
 
 /* ========= SORTIE ========= */
 echo json_encode($product, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+?>
