@@ -73,7 +73,7 @@ try {
                 VALUES (?, ?, ?, ?, NOW())";
         $stmt = $bd->prepare($sql);
         $stmt->execute([$product_id, $client_id, $seller_id, $seller_type]);
-        $conversation_id = $pdo->lastInsertId();
+        $conversation_id = $bd->lastInsertId();
     }
     
     echo json_encode([
