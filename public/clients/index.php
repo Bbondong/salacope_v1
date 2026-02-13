@@ -91,6 +91,7 @@ $cssFile = $pageStyles[$page] ?? 'home.css';
     <!-- CSS commun -->
     <link rel="stylesheet" href="./style/navbar-style.css">
 
+
     <!-- CSS spécifique à la page -->
     <link rel="stylesheet" href="./style/<?= htmlspecialchars($cssFile, ENT_QUOTES) ?>">
 

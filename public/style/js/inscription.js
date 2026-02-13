@@ -814,8 +814,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function handleAcheteurSuccess(result) {
         showNotification('Compte créé avec succès !', 'success');
         
-        // DÉBOGAGE
-        console.log('✅ Données reçues:', result);
+ 
         
         // Démarrer le compte à rebours pour le code
         startCodeCountdown(10, result);
@@ -850,8 +849,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 window.location.href = result.redirect;
                 
             } else {
-                console.log('🔄 Redirection par défaut vers double_authen.php');
-                window.location.href = './double_authen.php';
+                // a modifie ('🔄 Redirection par défaut vers double_authen.php');
+                window.location.href = '../clients/';
             }
         }, 1500);
     }

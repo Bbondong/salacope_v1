@@ -302,7 +302,8 @@ try {
             'manual_required' => !$whatsappStatus['sent'],
             'manual_message' => 'Cliquez pour ouvrir WhatsApp et envoyer le message pré-rempli'
         ],
-        'redirect' => './double_authen.php'
+        // a modifie plus tard pour la double authentification   'redirect' => './double_authen.php'
+        'redirect' => '../clients/'
     ];
 
     // Vider le buffer et envoyer la réponse JSON

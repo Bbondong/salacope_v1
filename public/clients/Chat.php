@@ -1,3 +1,4 @@
+<link rel="stylesheet" href="./style/chat.css">
 <?php
 /* =========================
    CHAT - PAGE PRINCIPALE
@@ -258,6 +259,7 @@ function displayChatConversation($seller_id, $product_id, $client_id, $seller_ty
         seller_type: "<?php echo $seller_type; ?>"
     };
     </script>
+    <script src="./js/chat.js"></script>
     <?php
 }
 ?>
