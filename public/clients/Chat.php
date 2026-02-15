@@ -777,6 +777,7 @@
 /* =========================
    CHAT - PAGE PRINCIPALE
 ========================= */
+session_start();
 
 // Récupérer les paramètres
 $seller_id = isset($_GET['seller']) ? intval($_GET['seller']) : 0;
@@ -1218,7 +1219,7 @@ class ChatSystem {
         };
         
         try {
-            const response = await fetch('/backend/clients/create_chat.php', {
+            const response = await fetch('/backend/clients/message.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(data)
