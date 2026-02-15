@@ -104,7 +104,7 @@ class ChatSystem {
             }
             
             if (price) {
-                price.textContent = product.price ? `${product.price} €` : 'Prix non disponible';
+                price.textContent = product.price ? `${product.price} $` : 'Prix non disponible';
             }
             
             if (banner) {
