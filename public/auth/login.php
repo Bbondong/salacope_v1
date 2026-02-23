@@ -25,7 +25,7 @@
             </form>
             <a href="./mot_passe.php">Mot des passe oublie</a>
             <p>Pas des compte <a href="./inscription.php">Inscrivez-vous</a></p>
-            <p> © COPYRIGhHT SALACOPE || create by <a href="#">Ben tech</a></p>
+            <p> © COPYRIGhHT TAKO || create by <a href="ben-tech.vercel.app">Ben tech</a></p>
         </div>
         <!-- Image illustration -->
         <div class="illustration"></div>

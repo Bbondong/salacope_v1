@@ -27,48 +27,48 @@ $date_creation = $admin['created_at'] ?? null;
 ========================= */
 $page = $_GET['page'] ?? 'Home';
 
-/* Whitelist stricte des pages */
+/* Whitelist stricte des pages - MIS À JOUR */
 function loadPage(string $page): string
 {
     $validPages = [
-        'Home'     => 'Home.php',
-        'Category' => 'Category.php',
-        'Favory'   => 'Favory.php',
-        'Chat'     => 'Chat.php',
-        'Profil'   => 'profil.php'
+        'Home'    => 'Home.php',
+        'Trips'   => 'Trips.php',      // Anciennement Category
+        'Favory'  => 'Favory.php',
+        'Payment' => 'Payment.php',     // Anciennement Chat
+        'Profil'  => 'profil.php'
     ];
 
     return $validPages[$page] ?? 'Home.php';
 }
 
-/* Titres des pages */
+/* Titres des pages - MIS À JOUR */
 $pageTitles = [
-    'Home'     => 'Page accueil',
-    'Category' => 'Produits',
-    'Favory'   => 'Favoris',
-    'Chat'     => 'Messagerie',
-    'Profil'   => 'Profil',
+    'Home'    => 'Accueil',
+    'Trips'   => 'Mes courses',         // Nouveau titre
+    'Favory'  => 'Favoris',
+    'Payment' => 'Moyens de paiement',  // Nouveau titre
+    'Profil'  => 'Profil',
 ];
 
-$pageTitle = $pageTitles[$page] ?? 'Page accueil';
+$pageTitle = $pageTitles[$page] ?? 'Accueil';
 
-/* CSS par page */
+/* CSS par page - MIS À JOUR */
 $pageStyles = [
-    'Home'     => 'home.css',
-    'Category' => 'category.css',
-    'Favory'   => 'favory.css',
-    'Chat'     => 'chat.css',
-    'Profil'   => 'profil.css',
+    'Home'    => 'home.css',
+    'Trips'   => 'trips.css',      // Nouveau fichier CSS
+    'Favory'  => 'favory.css',
+    'Payment' => 'payment.css',     // Nouveau fichier CSS
+    'Profil'  => 'profil.css',
 ];
 
-/* js par page */
+/* JS par page - MIS À JOUR */
 $pagejs = [
-    'Home'     => 'home.js',
-    'Chat' => 'chat.js',
+    'Home'    => 'home.js',
+    'Trips'   => 'trips.js',        // Nouveau fichier JS
+    'Payment' => 'payment.js',       // Nouveau fichier JS
 ];
 
-$jspage = $pagejs[$page];
-
+$jspage = $pagejs[$page] ?? '';
 $cssFile = $pageStyles[$page] ?? 'home.css';
 ?>
 <!DOCTYPE html>
@@ -91,7 +91,6 @@ $cssFile = $pageStyles[$page] ?? 'home.css';
     <!-- CSS commun -->
     <link rel="stylesheet" href="./style/navbar-style.css">
 
-
     <!-- CSS spécifique à la page -->
     <link rel="stylesheet" href="./style/<?= htmlspecialchars($cssFile, ENT_QUOTES) ?>">
 
@@ -104,11 +103,13 @@ $cssFile = $pageStyles[$page] ?? 'home.css';
         require loadPage($page);
     ?>
 
-    <!-- Navbar -->
+    <!-- Navbar (ton nouveau menu avec Accueil, Courses, Favoris, Paiement, Profil) -->
     <?php require 'includes/navbar.php'; ?>
 
     <!-- JS -->
-    <script src="./js/<?= htmlspecialchars($jspage, ENT_QUOTES) ?>"></script>
+    <?php if ($jspage): ?>
+        <script src="./js/<?= htmlspecialchars($jspage, ENT_QUOTES) ?>"></script>
+    <?php endif; ?>
 
 </body>
 </html>

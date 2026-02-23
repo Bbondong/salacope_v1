@@ -8,9 +8,9 @@
         </li>
 
         <li>
-            <a href="?page=Category" class="nav-item <?= $page=='Category'?'active':'' ?>">
-                <i class="fas fa-th-large"></i>
-                <span>Catégories</span>
+            <a href="?page=Trips" class="nav-item <?= $page=='Trips'?'active':'' ?>">
+                <i class="fas fa-history"></i>
+                <span>Courses</span>
             </a>
         </li>
 
@@ -22,9 +22,9 @@
         </li>
 
         <li>
-            <a href="?page=Chat" class="nav-item <?= $page=='Chat'?'active':'' ?>">
-                <i class="fas fa-comments"></i>
-                <span>Messages</span>
+            <a href="?page=Payment" class="nav-item <?= $page=='Payment'?'active':'' ?>">
+                <i class="fas fa-credit-card"></i>
+                <span>Paiement</span>
             </a>
         </li>
 
