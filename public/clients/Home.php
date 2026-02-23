@@ -10,384 +10,424 @@ $vehicles = [
         'name' => 'Moto',
         'icon' => 'fa-motorcycle',
         'base_price' => 500,
-        'price_per_km' => 200,
-        'eta' => '2-3 min',
-        'capacity' => '1 pers'
+        'price_per_km' => 250,
+        'eta' => '2 min',
+        'capacity' => '1',
+        'image' => 'https://cdn-icons-png.flaticon.com/512/3097/3097180.png'
     ],
     'voiture' => [
-        'name' => 'Voiture',
+        'name' => 'Berline',
         'icon' => 'fa-car',
         'base_price' => 1000,
-        'price_per_km' => 350,
-        'eta' => '3-5 min',
-        'capacity' => '4 pers'
+        'price_per_km' => 400,
+        'eta' => '4 min',
+        'capacity' => '4',
+        'image' => 'https://cdn-icons-png.flaticon.com/512/3097/3097139.png'
     ],
-    'berline' => [
-        'name' => 'Berline',
+    'suv' => [
+        'name' => 'SUV',
         'icon' => 'fa-car-side',
         'base_price' => 1500,
-        'price_per_km' => 500,
-        'eta' => '5-7 min',
-        'capacity' => '4 pers'
+        'price_per_km' => 550,
+        'eta' => '6 min',
+        'capacity' => '6',
+        'image' => 'https://cdn-icons-png.flaticon.com/512/3097/3097143.png'
     ],
     'van' => [
         'name' => 'Van',
         'icon' => 'fa-truck',
         'base_price' => 2000,
-        'price_per_km' => 650,
-        'eta' => '7-10 min',
-        'capacity' => '8 pers'
+        'price_per_km' => 700,
+        'eta' => '8 min',
+        'capacity' => '8',
+        'image' => 'https://cdn-icons-png.flaticon.com/512/3097/3097149.png'
     ]
 ];
 
-// Adresses fictives
-$savedAddresses = [
-    'Maison' => '123 Rue de la Paix, Dakar',
-    'Travail' => '45 Avenue Lamine Guèye, Dakar',
-    'Gym' => '78 Rue Mermoz, Dakar'
-];
+$currencySymbol = 'F';
 ?>
 
-<div class="taxi-home">
+<div class="taxi-home-2026">
 
-    <!-- En-tête avec profil -->
-    <div class="header">
-        <div class="user-greeting">
-            <h2>Bonjour, <?= htmlspecialchars($name ?: 'Cher client') ?> 👋</h2>
-            <p>Où allez-vous aujourd'hui ?</p>
+    <!-- Header minimaliste avec fond glass -->
+    <div class="header-glass">
+        <div class="greeting">
+            <span class="wave">👋</span>
+            <div>
+                <p class="hello">Bonjour,</p>
+                <h2><?= htmlspecialchars($name ?: 'Cher client') ?></h2>
+            </div>
         </div>
-        <div class="user-avatar">
-            <i class="fas fa-user-circle"></i>
+        <div class="profile-ring" onclick="window.location.href='?page=Profil'">
+            <i class="fas fa-user"></i>
         </div>
     </div>
 
-    <!-- Barre de recherche d'adresse -->
-    <div class="location-search">
-        <div class="location-inputs">
-            <div class="input-group pickup">
-                <i class="fas fa-circle"></i>
-                <input type="text" id="pickupLocation" placeholder="Votre position" value="Position actuelle" readonly>
+    <!-- Section recherche destination avec design 2026 -->
+    <div class="search-section">
+        <div class="location-glass">
+            <div class="location-item">
+                <div class="icon-bg pickup">
+                    <i class="fas fa-circle"></i>
+                </div>
+                <div class="location-details">
+                    <span class="label">Départ</span>
+                    <span class="value" id="pickupDisplay">Position actuelle</span>
+                </div>
             </div>
-            <div class="input-group destination">
-                <i class="fas fa-square"></i>
-                <input type="text" id="destinationInput" placeholder="Où allez-vous ?" autocomplete="off">
+            <div class="location-divider"></div>
+            <div class="location-item">
+                <div class="icon-bg destination">
+                    <i class="fas fa-map-pin"></i>
+                </div>
+                <div class="location-details">
+                    <span class="label">Destination</span>
+                    <input type="text" id="destinationInput" placeholder="Où allez-vous ?" autocomplete="off">
+                </div>
             </div>
         </div>
         <button class="swap-btn" id="swapLocations">
-            <i class="fas fa-exchange-alt"></i>
+            <i class="fas fa-arrow-down-arrow-up"></i>
         </button>
     </div>
 
-    <!-- Adresses enregistrées -->
-    <div class="saved-addresses" id="savedAddresses">
-        <?php foreach ($savedAddresses as $label => $address): ?>
-        <div class="address-chip" data-address="<?= htmlspecialchars($address) ?>">
-            <i class="fas fa-map-marker-alt"></i>
-            <span><?= $label ?></span>
-        </div>
-        <?php endforeach; ?>
-    </div>
+    <!-- Suggestions élégantes -->
+    <div class="suggestions-panel" id="suggestions"></div>
 
-    <!-- Suggestions de destinations (cachées par défaut) -->
-    <div class="suggestions" id="suggestions"></div>
-
-    <!-- Carte -->
-    <div class="map-container">
+    <!-- Carte avec overlay glass -->
+    <div class="map-wrapper">
         <div id="map"></div>
-        <div class="map-overlay">
-            <button class="locate-me" id="locateMe">
+        <div class="map-overlay-2026">
+            <button class="map-btn" id="locateMe">
                 <i class="fas fa-location-arrow"></i>
+            </button>
+            <button class="map-btn" id="zoomIn">
+                <i class="fas fa-plus"></i>
+            </button>
+            <button class="map-btn" id="zoomOut">
+                <i class="fas fa-minus"></i>
             </button>
         </div>
     </div>
 
-    <!-- Sélection des véhicules -->
-    <div class="vehicle-section">
-        <div class="section-header">
-            <h3>Choisissez votre véhicule</h3>
-            <span class="eta-label">Arrivée</span>
+    <!-- Adresses rapides en chips modernes -->
+    <div class="quick-addresses">
+        <div class="chip" data-address="Dakar, Sénégal">
+            <i class="fas fa-home"></i>
+            <span>Maison</span>
         </div>
-        <div class="vehicle-list" id="vehicleList">
-            <?php foreach ($vehicles as $key => $vehicle): ?>
-            <div class="vehicle-card" data-vehicle="<?= $key ?>" data-base-price="<?= $vehicle['base_price'] ?>" data-price-km="<?= $vehicle['price_per_km'] ?>">
-                <div class="vehicle-left">
-                    <i class="fas <?= $vehicle['icon'] ?> vehicle-icon"></i>
-                    <div class="vehicle-info">
-                        <h4><?= $vehicle['name'] ?></h4>
-                        <span class="vehicle-capacity"><i class="fas fa-user"></i> <?= $vehicle['capacity'] ?></span>
-                    </div>
+        <div class="chip" data-address="Plateau, Dakar">
+            <i class="fas fa-briefcase"></i>
+            <span>Travail</span>
+        </div>
+        <div class="chip" data-address="Aéroport Blaise Diagne">
+            <i class="fas fa-plane"></i>
+            <span>Aéroport</span>
+        </div>
+    </div>
+
+    <!-- Section véhicules en cartes luxueuses -->
+    <div class="vehicles-section">
+        <div class="section-header-2026">
+            <h3>Choisissez votre véhicule</h3>
+            <span class="badge">Disponibles</span>
+        </div>
+
+        <div class="vehicles-grid">
+            <?php foreach ($vehicles as $key => $vehicle): 
+                $priceInCurrency = $vehicle['base_price'];
+            ?>
+            <div class="vehicle-card-2026" data-vehicle="<?= $key ?>" 
+                 data-base-price="<?= $vehicle['base_price'] ?>"
+                 data-price-km="<?= $vehicle['price_per_km'] ?>">
+                <div class="vehicle-image">
+                    <img src="<?= $vehicle['image'] ?>" alt="<?= $vehicle['name'] ?>">
                 </div>
-                <div class="vehicle-right">
-                    <span class="vehicle-eta"><?= $vehicle['eta'] ?></span>
-                    <span class="vehicle-price" id="price-<?= $key ?>"><?= number_format($vehicle['base_price'], 0) ?> F</span>
+                <div class="vehicle-content">
+                    <div class="vehicle-header">
+                        <h4><?= $vehicle['name'] ?></h4>
+                        <span class="capacity"><i class="fas fa-user"></i> <?= $vehicle['capacity'] ?></span>
+                    </div>
+                    <div class="vehicle-footer">
+                        <span class="eta"><i class="fas fa-clock"></i> <?= $vehicle['eta'] ?></span>
+                        <span class="price" id="price-<?= $key ?>"><?= $priceInCurrency ?> <?= $currencySymbol ?></span>
+                    </div>
                 </div>
             </div>
             <?php endforeach; ?>
         </div>
     </div>
 
-    <!-- Estimation détaillée (apparaît après sélection) -->
-    <div class="trip-estimate" id="tripEstimate" style="display: none;">
-        <div class="estimate-header">
-            <h3>Estimation de la course</h3>
-            <span class="final-price" id="finalPrice">0 F</span>
+    <!-- Carte de résumé de course (apparaît après sélection) -->
+    <div class="trip-summary-card" id="tripSummary" style="display: none;">
+        <div class="summary-header">
+            <span class="title">Récapitulatif de votre course</span>
+            <span class="price-tag" id="finalPrice">0 <?= $currencySymbol ?></span>
         </div>
-        <div class="estimate-details">
-            <div class="detail-item">
-                <span>Distance</span>
-                <span id="distanceEstimate">0 km</span>
+        
+        <div class="summary-route">
+            <div class="route-point">
+                <div class="dot green"></div>
+                <span class="address" id="pickupAddress">Chargement...</span>
             </div>
-            <div class="detail-item">
-                <span>Durée</span>
-                <span id="durationEstimate">0 min</span>
-            </div>
-            <div class="detail-item">
-                <span>Prix de base</span>
-                <span id="basePriceEstimate">0 F</span>
-            </div>
-            <div class="detail-item total">
-                <span>Total</span>
-                <span id="totalEstimate">0 F</span>
+            <div class="route-line"></div>
+            <div class="route-point">
+                <div class="dot red"></div>
+                <span class="address" id="destinationAddress">Non définie</span>
             </div>
         </div>
-    </div>
 
-    <!-- Bouton de commande -->
-    <div class="order-section">
-        <button class="order-btn" id="orderBtn" disabled>
+        <div class="summary-details">
+            <div class="detail-row">
+                <span><i class="fas fa-route"></i> Distance</span>
+                <span class="value" id="distanceEstimate">0 km</span>
+            </div>
+            <div class="detail-row">
+                <span><i class="fas fa-clock"></i> Durée</span>
+                <span class="value" id="durationEstimate">0 min</span>
+            </div>
+            <div class="detail-row highlight">
+                <span><i class="fas fa-coins"></i> Prix total</span>
+                <span class="value" id="totalEstimate">0 <?= $currencySymbol ?></span>
+            </div>
+        </div>
+
+        <button class="confirm-btn" id="orderBtn" disabled>
             <span>Confirmer la course</span>
-            <i class="fas fa-chevron-right"></i>
+            <i class="fas fa-arrow-right"></i>
         </button>
     </div>
 
 </div>
 
-<!-- Inclusion de la map (Leaflet) -->
+<!-- Librairies -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-// Données fictives pour les suggestions
-const suggestionsData = [
-    "Aéroport International Blaise Diagne",
-    "Gare Routière de Pompiers",
-    "Université Cheikh Anta Diop",
-    "Plage de Ngor",
-    "Marché Kermel",
-    "Almadies"
-];
-
 // État de l'application
 let map;
-let pickupMarker, destinationMarker;
-let pickupCoords = [14.7167, -17.4677]; // Dakar par défaut
-let destinationCoords = null;
-let selectedVehicle = 'moto';
-let routeLine = null;
-let distance = 0;
-let duration = 0;
-
-// Initialisation de la carte
-function initMap() {
-    map = L.map('map').setView(pickupCoords, 13);
-    
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-
-    // Marqueur de départ (position actuelle)
-    pickupMarker = L.marker(pickupCoords, {
-        icon: L.divIcon({
-            className: 'pickup-marker',
-            html: '<i class="fas fa-circle" style="color: #4CAF50; font-size: 20px;"></i>',
-            iconSize: [20, 20]
-        })
-    }).addTo(map).bindPopup('Point de départ');
-
-    // Gestionnaire de clic sur la carte
-    map.on('click', function(e) {
-        setDestination(e.latlng);
-    });
-
-    // Géolocalisation
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function(position) {
-            pickupCoords = [position.coords.latitude, position.coords.longitude];
-            map.setView(pickupCoords, 14);
-            updatePickupMarker();
-        });
-    }
-}
-
-// Recherche de lieux (simulée)
-function searchLocations(query) {
-    const suggestions = document.getElementById('suggestions');
-    suggestions.innerHTML = '';
-    
-    if (query.length < 2) {
-        suggestions.style.display = 'none';
-        return;
-    }
-
-    const filtered = suggestionsData.filter(item => 
-        item.toLowerCase().includes(query.toLowerCase())
-    );
-
-    if (filtered.length > 0) {
-        suggestions.style.display = 'block';
-        filtered.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'suggestion-item';
-            div.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${item}`;
-            div.onclick = () => {
-                document.getElementById('destinationInput').value = item;
-                suggestions.style.display = 'none';
-                // Simuler des coordonnées pour la démo
-                setDestination([pickupCoords[0] + 0.01, pickupCoords[1] + 0.01]);
-            };
-            suggestions.appendChild(div);
-        });
-    } else {
-        suggestions.style.display = 'none';
-    }
-}
-
-// Définir la destination
-function setDestination(coords) {
-    if (destinationMarker) {
-        map.removeLayer(destinationMarker);
-    }
-
-    destinationCoords = coords;
-    
-    destinationMarker = L.marker(coords, {
-        icon: L.divIcon({
-            className: 'destination-marker',
-            html: '<i class="fas fa-map-pin" style="color: #ff6f61; font-size: 30px;"></i>',
-            iconSize: [30, 30]
-        })
-    }).addTo(map).bindPopup('Destination');
-
-    map.fitBounds([pickupCoords, coords], { padding: [50, 50] });
-    
-    // Simuler le calcul de distance
-    distance = (Math.random() * 10 + 2).toFixed(1);
-    duration = Math.round(distance * 3);
-    
-    drawRoute();
-    updatePrices();
-    
-    document.getElementById('orderBtn').disabled = false;
-}
-
-// Dessiner un itinéraire simulé
-function drawRoute() {
-    if (routeLine) {
-        map.removeLayer(routeLine);
-    }
-
-    // Points de contrôle pour simuler une route réaliste
-    const latlngs = [
-        pickupCoords,
-        [pickupCoords[0] + (destinationCoords[0] - pickupCoords[0]) * 0.3, 
-         pickupCoords[1] + (destinationCoords[1] - pickupCoords[1]) * 0.3 + 0.005],
-        [pickupCoords[0] + (destinationCoords[0] - pickupCoords[0]) * 0.7, 
-         pickupCoords[1] + (destinationCoords[1] - pickupCoords[1]) * 0.7 - 0.005],
-        destinationCoords
-    ];
-
-    routeLine = L.polyline(latlngs, {
-        color: '#ff6f61',
-        weight: 4,
-        opacity: 0.8,
-        lineJoin: 'round'
-    }).addTo(map);
-}
-
-// Mettre à jour les prix
-function updatePrices() {
-    const selectedCard = document.querySelector(`.vehicle-card[data-vehicle="${selectedVehicle}"]`);
-    if (!selectedCard) return;
-
-    const basePrice = parseInt(selectedCard.dataset.basePrice);
-    const pricePerKm = parseInt(selectedCard.dataset.priceKm);
-    const totalPrice = basePrice + (pricePerKm * distance);
-
-    document.getElementById(`price-${selectedVehicle}`).innerHTML = totalPrice.toFixed(0) + ' F';
-    
-    // Mettre à jour l'estimation
-    document.getElementById('tripEstimate').style.display = 'block';
-    document.getElementById('finalPrice').innerHTML = totalPrice.toFixed(0) + ' F';
-    document.getElementById('distanceEstimate').innerHTML = distance + ' km';
-    document.getElementById('durationEstimate').innerHTML = duration + ' min';
-    document.getElementById('basePriceEstimate').innerHTML = basePrice + ' F';
-    document.getElementById('totalEstimate').innerHTML = totalPrice.toFixed(0) + ' F';
-}
-
-// Mettre à jour le marqueur de départ
-function updatePickupMarker() {
-    if (pickupMarker) {
-        map.removeLayer(pickupMarker);
-    }
-    
-    pickupMarker = L.marker(pickupCoords, {
-        icon: L.divIcon({
-            className: 'pickup-marker',
-            html: '<i class="fas fa-circle" style="color: #4CAF50; font-size: 20px;"></i>',
-            iconSize: [20, 20]
-        })
-    }).addTo(map);
-}
+let pickupCoords = null;
+let destCoords = null;
+let selectedVehicle = 'voiture';
+let pickupMarker, destMarker, routeLine;
+let currentDistance = 0;
+let currentDuration = 0;
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', function() {
     initMap();
+    initEventListeners();
+});
 
-    // Recherche de destinations
-    document.getElementById('destinationInput').addEventListener('input', function(e) {
-        searchLocations(e.target.value);
+function initMap() {
+    map = L.map('map', {
+        zoomControl: false,
+        attributionControl: false
     });
 
-    // Adresses enregistrées
-    document.querySelectorAll('.address-chip').forEach(chip => {
-        chip.addEventListener('click', function() {
-            document.getElementById('destinationInput').value = this.dataset.address;
-            // Simuler des coordonnées
-            setDestination([pickupCoords[0] + 0.015, pickupCoords[1] + 0.01]);
-        });
-    });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
 
-    // Sélection de véhicule
-    document.querySelectorAll('.vehicle-card').forEach(card => {
-        card.addEventListener('click', function() {
-            document.querySelectorAll('.vehicle-card').forEach(c => c.classList.remove('selected'));
-            this.classList.add('selected');
-            selectedVehicle = this.dataset.vehicle;
-            if (destinationCoords) {
-                updatePrices();
-            }
-        });
-    });
-
-    // Bouton de localisation
-    document.getElementById('locateMe').addEventListener('click', function() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(position) {
+    // Géolocalisation
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
                 pickupCoords = [position.coords.latitude, position.coords.longitude];
-                map.setView(pickupCoords, 15);
-                updatePickupMarker();
+                map.setView(pickupCoords, 14);
+                
+                pickupMarker = L.marker(pickupCoords, {
+                    icon: L.divIcon({
+                        className: 'custom-marker',
+                        html: '<div class="marker-pulse"></div><i class="fas fa-circle" style="color: #4CAF50; font-size: 20px;"></i>',
+                        iconSize: [20, 20]
+                    })
+                }).addTo(map);
+                
+                reverseGeocode(pickupCoords);
+            },
+            function() {
+                pickupCoords = [14.7167, -17.4677];
+                map.setView(pickupCoords, 12);
+            }
+        );
+    }
+
+    // Clic sur la carte pour destination
+    map.on('click', function(e) {
+        setDestination([e.latlng.lat, e.latlng.lng]);
+    });
+}
+
+// Recherche de lieux
+async function searchLocations(query) {
+    if (query.length < 2) {
+        document.getElementById('suggestions').style.display = 'none';
+        return;
+    }
+
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
+        const data = await response.json();
+        
+        const suggestions = document.getElementById('suggestions');
+        suggestions.innerHTML = '';
+        
+        if (data.length > 0) {
+            suggestions.style.display = 'block';
+            data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item-2026';
+                div.innerHTML = `
+                    <i class="fas fa-map-marker-alt"></i>
+                    <div>
+                        <strong>${item.display_name.split(',')[0]}</strong>
+                        <small>${item.display_name.split(',').slice(1,3).join(',')}</small>
+                    </div>
+                `;
+                div.onclick = () => {
+                    document.getElementById('destinationInput').value = item.display_name.split(',')[0];
+                    suggestions.style.display = 'none';
+                    setDestination([parseFloat(item.lat), parseFloat(item.lon)]);
+                };
+                suggestions.appendChild(div);
             });
         }
+    } catch (error) {
+        console.error('Erreur:', error);
+    }
+}
+
+// Définir destination
+function setDestination(coords) {
+    destCoords = coords;
+    
+    if (destMarker) map.removeLayer(destMarker);
+    
+    destMarker = L.marker(coords, {
+        icon: L.divIcon({
+            className: 'custom-marker',
+            html: '<i class="fas fa-map-pin" style="color: #ff6f61; font-size: 30px;"></i>',
+            iconSize: [30, 30]
+        })
+    }).addTo(map);
+    
+    map.fitBounds([pickupCoords, coords], { padding: [50, 50] });
+    calculateRoute(pickupCoords, coords);
+    reverseGeocode(coords, 'destination');
+    
+    document.getElementById('orderBtn').disabled = false;
+}
+
+// Calcul itinéraire
+async function calculateRoute(start, end) {
+    const url = `https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full`;
+    
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.routes && data.routes[0]) {
+            const route = data.routes[0];
+            currentDistance = route.distance / 1000;
+            currentDuration = route.duration / 60;
+            
+            // Dessiner la route
+            if (routeLine) map.removeLayer(routeLine);
+            
+            const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+            routeLine = L.polyline(coordinates, {
+                color: '#ff6f61',
+                weight: 4,
+                opacity: 0.8
+            }).addTo(map);
+            
+            updatePrices();
+        }
+    } catch (error) {
+        console.error('Erreur calcul:', error);
+    }
+}
+
+// Mise à jour des prix
+function updatePrices() {
+    const vehicleCards = document.querySelectorAll('.vehicle-card-2026');
+    
+    vehicleCards.forEach(card => {
+        const basePrice = parseInt(card.dataset.basePrice);
+        const pricePerKm = parseInt(card.dataset.priceKm);
+        const total = basePrice + (pricePerKm * currentDistance);
+        
+        card.querySelector('.price').innerHTML = Math.round(total) + ' F';
+        
+        if (card.dataset.vehicle === selectedVehicle) {
+            document.getElementById('tripSummary').style.display = 'block';
+            document.getElementById('finalPrice').innerHTML = Math.round(total) + ' F';
+            document.getElementById('distanceEstimate').innerHTML = currentDistance.toFixed(1) + ' km';
+            document.getElementById('durationEstimate').innerHTML = Math.round(currentDuration) + ' min';
+            document.getElementById('totalEstimate').innerHTML = Math.round(total) + ' F';
+        }
+    });
+}
+
+// Géocodage inverse
+async function reverseGeocode(coords, type = 'pickup') {
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords[0]}&lon=${coords[1]}`);
+        const data = await response.json();
+        
+        if (type === 'pickup') {
+            document.getElementById('pickupDisplay').innerHTML = data.display_name?.split(',')[0] || 'Position actuelle';
+            document.getElementById('pickupAddress').innerHTML = data.display_name || 'Position actuelle';
+        } else {
+            document.getElementById('destinationAddress').innerHTML = data.display_name || 'Destination';
+        }
+    } catch (error) {
+        console.error('Erreur géocodage:', error);
+    }
+}
+
+// Event listeners
+function initEventListeners() {
+    // Recherche
+    let timeout;
+    document.getElementById('destinationInput').addEventListener('input', function(e) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => searchLocations(e.target.value), 300);
     });
 
-    // Bouton de commande
-    document.getElementById('orderBtn').addEventListener('click', function() {
-        if (!destinationCoords) return;
-        
-        const vehicle = document.querySelector(`.vehicle-card[data-vehicle="${selectedVehicle}"] h4`).innerHTML;
-        const total = document.getElementById('totalEstimate').innerHTML;
-        
-        alert(`Course confirmée !\nVéhicule: ${vehicle}\nDistance: ${distance} km\nPrix total: ${total}\nUn chauffeur arrive dans quelques minutes.`);
+    // Adresses rapides
+    document.querySelectorAll('.chip').forEach(chip => {
+        chip.addEventListener('click', function() {
+            document.getElementById('destinationInput').value = this.querySelector('span').innerHTML;
+            searchLocations(this.querySelector('span').innerHTML);
+        });
     });
-});
+
+    // Sélection véhicule
+    document.querySelectorAll('.vehicle-card-2026').forEach(card => {
+        card.addEventListener('click', function() {
+            document.querySelectorAll('.vehicle-card-2026').forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            selectedVehicle = this.dataset.vehicle;
+            if (currentDistance > 0) updatePrices();
+        });
+    });
+
+    // Bouton localisation
+    document.getElementById('locateMe').addEventListener('click', function() {
+        if (pickupCoords) map.setView(pickupCoords, 16);
+    });
+
+    // Zoom
+    document.getElementById('zoomIn').addEventListener('click', () => map.zoomIn());
+    document.getElementById('zoomOut').addEventListener('click', () => map.zoomOut());
+
+    // Commande
+    document.getElementById('orderBtn').addEventListener('click', function() {
+        const vehicle = document.querySelector(`.vehicle-card-2026[data-vehicle="${selectedVehicle}"] h4`).innerHTML;
+        alert(`✅ Course confirmée !\nVéhicule: ${vehicle}\nPrix: ${document.getElementById('totalEstimate').innerHTML}`);
+    });
+}
 </script>
